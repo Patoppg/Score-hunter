@@ -65,7 +65,9 @@
             td { background: transparent !important; color: black !important; }
             .penale-input, .name-input { border: none; background: transparent; color: black; font-weight: bold; width: 100%; padding: 0; text-align: center; }
             .name-input { text-align: left; }
-            .color-dot { display: none !important; }
+            .color-dot, .btn-eye { display: none !important; }
+            td:nth-child(2) { display: none !important; }
+            th:nth-child(2) { display: none !important; }
         }
     </style>
 </head>
@@ -87,7 +89,7 @@
     </div>
 
     <div class="card">
-        <h2>🎯 MPG Score Hunter <small style="font-size:12px; color:#ff9800;">v1.7 (Anti-Skok Fix)</small></h2>
+        <h2>🎯 MPG Score Hunter <small style="font-size:12px; color:#ff9800;">v1.8 (Sólo náhľad letu)</small></h2>
         <input type="text" id="task-name-input" class="input-text" value="Score Hunter Let 1">
         
         <div class="setting-box" style="justify-content: space-between;">
@@ -149,6 +151,7 @@
     <div class="card" id="leaderboard-box" style="display:none; overflow-x:auto;">
         <h3>🏆 Výsledková listina - Score Hunter</h3>
         <div class="btn-group" style="margin-bottom:15px;">
+            <button class="btn btn-maptype" onclick="zobrazLet(-1)">👁️ Ukázať všetky lety</button>
             <button class="btn btn-csv" onclick="exportovatDoCSV()">Stiahnuť CSV 📊</button>
             <button class="btn btn-print-table" onclick="window.print()">Tlačiť výsledky 🖨️</button>
         </div>
@@ -390,13 +393,9 @@
                             }
                         } 
                         
-                        // FIX: Ak GPX obsahuje START/CIEL ale bez nakreslených čiar, vytvoríme obrovskú horizontálnu 600m čiaru
                         if (nazov === "START" || nazov === "CIEL") {
                             if (!p1 || !p2) {
-                                typ = "gate"; 
-                                p1 = [lat, lon - 0.004]; 
-                                p2 = [lat, lon + 0.004]; 
-                                skore = 0; farba = 'black';
+                                typ = "gate"; p1 = [lat, lon - 0.004]; p2 = [lat, lon + 0.004]; skore = 0; farba = 'black';
                             }
                         }
                         mojeOtocneBody.push({ nazov: nazov, typ: typ, lat: lat, lon: lon, p1: p1, p2: p2, skore: skore, farba: farba });
@@ -414,9 +413,30 @@
         function formatCas(s) { const m = Math.floor(s/60); const sec = s%60; return m+"m "+sec+"s"; }
         const citajSubor = (file) => new Promise((resolve) => { const reader = new FileReader(); reader.onload = (e) => resolve({ text: e.target.result, file: file.name }); reader.readAsText(file); });
 
+        // TÁTO FUNKCIA PREPÍNA ZOBRAZENIE MÁP PRE PILOTOV
+        window.zobrazLet = function(idx) {
+            if (idx === -1) {
+                vysledkyPiloti.forEach(p => {
+                    if(p.polyline && !map.hasLayer(p.polyline)) p.polyline.addTo(map);
+                });
+            } else {
+                vysledkyPiloti.forEach((p, i) => {
+                    if (p.polyline) {
+                        if (i === idx) {
+                            if(!map.hasLayer(p.polyline)) p.polyline.addTo(map);
+                            p.polyline.bringToFront();
+                        } else {
+                            if(map.hasLayer(p.polyline)) map.removeLayer(p.polyline);
+                        }
+                    }
+                });
+            }
+        }
+
         document.getElementById('igc-input').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files); if (files.length === 0 || mojeOtocneBody.length < 2) return;
-            vysledkyPiloti = []; flightPolylines.forEach(pl => map.removeLayer(pl)); flightPolylines = [];
+            vysledkyPiloti.forEach(p => { if (p.polyline) map.removeLayer(p.polyline); });
+            vysledkyPiloti = []; 
             const results = await Promise.all(files.map(f => citajSubor(f)));
             let polomer = getPolomer();
             
@@ -432,13 +452,12 @@
 
                 let farbaLetu = farbyPiloti[indexLetu % farbyPiloti.length];
                 let pl = L.polyline(trackPoints.map(p => [p.lat, p.lon]), { color: farbaLetu, weight: 3, opacity: 0.8 }).addTo(map);
-                pl.bindPopup(`<b>Pilot: ${menoPilota}</b>`); flightPolylines.push(pl);
+                pl.bindPopup(`<b>Pilot: ${menoPilota}</b>`);
 
                 let idxStart = -1; let moznyCiel = -1;
                 const startBod = mojeOtocneBody.find(b => b.nazov.includes("START")); 
                 const cielBod = mojeOtocneBody.find(b => b.nazov.includes("CIEL"));
                 
-                // FIX: Inteligentné vyhodnotenie štartu a cieľa
                 if (startBod && cielBod && startBod.p1 && cielBod.p1) {
                     for (let i = 1; i < trackPoints.length; i++) {
                         let predchBod = [trackPoints[i-1].lat, trackPoints[i-1].lon];
@@ -449,7 +468,6 @@
                             continue; 
                         }
                         
-                        // Ak už odštartoval, hľadáme posledné preťatie cieľa (ochrana 60 sekúnd voči "okamžitému" preťatiu)
                         if (idxStart !== -1) {
                             let casL = trackPoints[i].sekundy - trackPoints[idxStart].sekundy;
                             if (casL > 60 && ciarySaPretinaju(predchBod, aktBod, cielBod.p1, cielBod.p2)) { 
@@ -478,7 +496,7 @@
                     });
                 }
 
-                vysledkyPiloti.push({ meno: menoPilota, maCas: maCas, casBaseSec: casBaseSec, nazbieraneBody: nazbieraneBody, ziskaneOtocaky: ziskaneOtocaky.join(', '), penaleRucne: 0 });
+                vysledkyPiloti.push({ meno: menoPilota, maCas: maCas, casBaseSec: casBaseSec, nazbieraneBody: nazbieraneBody, ziskaneOtocaky: ziskaneOtocaky.join(', '), penaleRucne: 0, farba: farbaLetu, polyline: pl });
             });
             vyhodnotStatus(); vykresliLeaderboard();
         });
@@ -513,13 +531,14 @@
             vysledkyPiloti.sort((a, b) => b.celkovo - a.celkovo);
 
             let html = `<table><tr>
-                <th>#</th><th style="text-align:left;">Pilot</th><th>Čas letu<br><small>(Limit: ${getCasLimit()}m)</small></th><th>Získané Body<br><small>(Otočáky)</small></th><th>Zoznam bodov</th><th style="color:#e94560;">Penále Čas<br><small>(-${penalZaMin}b/min)</small></th><th style="color:#ff9800;">Ostatné Penále<br><small>(zápis)</small></th><th style="color:#4caf50; font-size:14px;">CELKOVO SCORE</th>
+                <th>Mapa</th><th>#</th><th style="text-align:left;">Pilot</th><th>Čas letu<br><small>(Limit: ${getCasLimit()}m)</small></th><th>Získané Body<br><small>(Otočáky)</small></th><th>Zoznam bodov</th><th style="color:#e94560;">Penále Čas<br><small>(-${penalZaMin}b/min)</small></th><th style="color:#ff9800;">Ostatné Penále<br><small>(zápis)</small></th><th style="color:#4caf50; font-size:14px;">CELKOVO SCORE</th>
             </tr>`;
             
             vysledkyPiloti.forEach((p, i) => {
                 let statusRiadok = !p.maCas ? 'class="dnf-row"' : '';
                 let casL = p.maCas ? formatCas(p.casBaseSec) : "<span class='dnf-text'>Mimo trate / Bez Štartu</span>";
                 html += `<tr ${statusRiadok}>
+                    <td><button class="btn-eye" onclick="zobrazLet(${i})" style="background:#3f51b5; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer;">👁️</button></td>
                     <td>${i+1}</td>
                     <td style="text-align:left; white-space:nowrap;"><span class="color-dot" style="background:${p.farba};"></span><input type="text" class="name-input" value="${p.meno}" onchange="zmenMeno(${i}, this.value)"></td>
                     <td>${casL}</td>
