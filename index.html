@@ -20,7 +20,7 @@
         
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         .btn { flex: 1; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; color: #fff; min-width: 100px; font-size: 14px; text-align: center; }
-        .btn-save { background: #4caf50; } .btn-maptype { background: #3f51b5; } .btn-racer { background: #9c27b0; } .btn-gpx { background: #008CBA; } .btn-import-gpx { background: #8bc34a; color: white; } .btn-qr { background: #673ab7; } .btn-reset { background: #555; } .btn-csv { background: #00bcd4; } .btn-download { background: #e94560; } .btn-print-table { background: #ff9800; }
+        .btn-save { background: #4caf50; } .btn-maptype { background: #3f51b5; } .btn-racer { background: #9c27b0; } .btn-gpx { background: #008CBA; } .btn-import-gpx { background: #8bc34a; color: white; } .btn-reset { background: #555; } .btn-csv { background: #00bcd4; } .btn-download { background: #e94560; } .btn-print-table { background: #ff9800; }
         
         #map { width: 100%; height: 500px; border-radius: 8px; border: 2px solid #555; background: #e5e3df; display: block; position: relative; z-index: 1; overflow: hidden; }
         
@@ -87,7 +87,7 @@
     </div>
 
     <div class="card">
-        <h2>🎯 MPG Score Hunter <small style="font-size:12px; color:#ff9800;">v1.6 (Fix GPX exportu pre Simulátor)</small></h2>
+        <h2>🎯 MPG Score Hunter <small style="font-size:12px; color:#ff9800;">v1.7 (Anti-Skok Fix)</small></h2>
         <input type="text" id="task-name-input" class="input-text" value="Score Hunter Let 1">
         
         <div class="setting-box" style="justify-content: space-between;">
@@ -186,31 +186,12 @@
                 osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, crossOrigin: 'anonymous' });
                 topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, crossOrigin: 'anonymous' });
                 
-                openAipLayer = L.tileLayer('https://nwy-tiles-api.prod.newaydata.com/tiles/{z}/{x}/{y}.png?path=latest/aero/latest', { maxZoom: 14, crossOrigin: 'anonymous' });
-                
                 topoLayer.addTo(map);
                 L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 300 }).addTo(map);
                 
                 nacitatVsetkyTrateZPamate();
                 map.on('click', mapClickAction);
                 setTimeout(() => { if(map) map.invalidateSize(); }, 300);
-
-                setInterval(() => {
-                    let scaleLines = document.querySelectorAll('.leaflet-control-scale-line');
-                    scaleLines.forEach(scaleLine => {
-                        if(!scaleLine.querySelector('.tick-container')) {
-                            let tc = document.createElement('div');
-                            tc.className = 'tick-container';
-                            tc.style.cssText = 'position:absolute; bottom:0; left:0; width:100%; height:8px; display:flex; justify-content:space-between;';
-                            for(let i=0; i<=5; i++) {
-                                let tick = document.createElement('div');
-                                tick.style.cssText = 'width:3px; height:8px; background:black;';
-                                tc.appendChild(tick);
-                            }
-                            scaleLine.appendChild(tc);
-                        }
-                    });
-                }, 1000);
 
             } catch (error) { console.error("Chyba mapy:", error); }
         }
@@ -219,68 +200,42 @@
             let btn = document.querySelector('.btn-maptype');
             if (aktualnyRezimMapy === 'topo') {
                 if (!openAipKey) {
-                    let key = prompt("⚠️ Letecké servery (OpenAIP) uzamkli voľný prístup.\n\n1. Choď na www.openaip.net a vytvor si tam zadarmo účet.\n2. V menu hore klikni na 'Clients' a 'Create Client'.\n3. Skopíruj ten dlhý kód (Token / API kľúč) a vlož ho sem:", "");
+                    let key = prompt("Zadaj OpenAIP kľúč pre letecké priestory:", "");
                     if (key && key.trim() !== "") {
-                        openAipKey = key.trim();
-                        localStorage.setItem('openaip_api_key', openAipKey);
+                        openAipKey = key.trim(); localStorage.setItem('openaip_api_key', openAipKey);
                     } else {
-                        alert("Bez kľúča sa letecké priestory nedajú stiahnuť. Prepínam na čistú mapu.");
-                        map.removeLayer(topoLayer);
-                        osmLayer.addTo(map);
-                        aktualnyRezimMapy = 'osm';
-                        btn.innerHTML = "Mapa: ZÁKLAD 🗺️";
-                        return;
+                        map.removeLayer(topoLayer); osmLayer.addTo(map); aktualnyRezimMapy = 'osm'; btn.innerHTML = "Mapa: ZÁKLAD 🗺️"; return;
                     }
                 }
-                
                 if (openAipKey) {
                     if(openAipLayer) map.removeLayer(openAipLayer);
                     openAipLayer = L.tileLayer(`https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=${openAipKey}`, { maxZoom: 14, crossOrigin: 'anonymous' });
-                    
-                    map.removeLayer(topoLayer);
-                    osmLayer.addTo(map);
-                    openAipLayer.addTo(map);
-                    aktualnyRezimMapy = 'icao';
-                    btn.innerHTML = "Mapa: ICAO 🗺️";
+                    map.removeLayer(topoLayer); osmLayer.addTo(map); openAipLayer.addTo(map); aktualnyRezimMapy = 'icao'; btn.innerHTML = "Mapa: ICAO 🗺️";
                 }
             } else if (aktualnyRezimMapy === 'icao') {
                 if(openAipLayer) map.removeLayer(openAipLayer);
-                map.removeLayer(osmLayer);
-                osmLayer.addTo(map);
-                aktualnyRezimMapy = 'osm';
-                btn.innerHTML = "Mapa: ZÁKLAD 🗺️";
+                map.removeLayer(osmLayer); osmLayer.addTo(map); aktualnyRezimMapy = 'osm'; btn.innerHTML = "Mapa: ZÁKLAD 🗺️";
             } else {
-                map.removeLayer(osmLayer);
-                topoLayer.addTo(map);
-                aktualnyRezimMapy = 'topo';
-                btn.innerHTML = "Mapa: TOPO 🗺️";
+                map.removeLayer(osmLayer); topoLayer.addTo(map); aktualnyRezimMapy = 'topo'; btn.innerHTML = "Mapa: TOPO 🗺️";
             }
         }
         
         window.zmazatIcaoKluc = function() {
-            if(confirm("Naozaj chceš zmazať uložený ICAO kľúč z pamäte telefónu?")) {
-                localStorage.removeItem('openaip_api_key');
-                openAipKey = "";
-                alert("ICAO kľúč bol zmazaný. Pri ďalšom prepnutí mapy si appka vypýta nový.");
-                if(aktualnyRezimMapy === 'icao') prepniMapu();
-            }
+            if(confirm("Naozaj zmazať ICAO kľúč?")) { localStorage.removeItem('openaip_api_key'); openAipKey = ""; if(aktualnyRezimMapy === 'icao') prepniMapu(); }
         }
 
         window.prepniRezimPretekara = function() {
             rezimPretekara = !rezimPretekara;
             let btn = document.querySelector('.btn-racer');
-            if (rezimPretekara) {
-                btn.innerHTML = "Organizátor (Ukázať čiary) 👁️"; btn.style.background = "#ff9800";
-            } else {
-                btn.innerHTML = "Pretekár (Skryť čiary) 👁️"; btn.style.background = "#9c27b0";
-            }
+            if (rezimPretekara) { btn.innerHTML = "Organizátor (Ukázať čiary) 👁️"; btn.style.background = "#ff9800"; } 
+            else { btn.innerHTML = "Pretekár (Skryť čiary) 👁️"; btn.style.background = "#9c27b0"; }
             prekresliVsetkyBody();
         }
 
         window.stiahnutMapu = function() {
-            if (mojeOtocneBody.length === 0) return alert("Najprv pridaj body na mapu!");
+            if (mojeOtocneBody.length === 0) return alert("Pridaj body na mapu!");
             const btn = document.getElementById('btn-download'); const staryText = btn.innerHTML;
-            btn.innerHTML = "⏳ Generujem A4 Mapu..."; btn.style.background = "#ff9800";
+            btn.innerHTML = "⏳ Generujem..."; btn.style.background = "#ff9800";
             const mapDiv = document.getElementById('map');
             const zoomControls = document.querySelectorAll('.leaflet-control-zoom'); zoomControls.forEach(el => el.style.display = 'none');
             const oW = mapDiv.style.width, oH = mapDiv.style.height, oPos = mapDiv.style.position, oZ = mapDiv.style.zIndex, oT = mapDiv.style.top, oL = mapDiv.style.left;
@@ -296,27 +251,17 @@
             map.invalidateSize(); map.fitBounds(bounds, { padding: [60, 60] });
 
             mapMarkers.forEach(m => { if (m.setIcon && m.options.markerType === 'waypoint') { m.setIcon(iconPrint); } });
-            const scaleL = document.querySelector('.leaflet-control-scale-line');
-            if (scaleL) { scaleL.style.transform = 'scale(3)'; scaleL.style.transformOrigin = 'bottom left'; }
-
+            
             setTimeout(() => {
                 html2canvas(mapDiv, { useCORS: true, allowTaint: false, scale: 1 }).then(canvas => {
                     let link = document.createElement('a'); 
-                    let nazovSuboru = (dLat > dLon) ? "Mpg_ScoreHunter_Na_Vysku.jpg" : "Mpg_ScoreHunter_Na_Sirku.jpg";
-                    link.download = nazovSuboru; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
+                    link.download = (dLat > dLon) ? "ScoreHunter_Na_Vysku.jpg" : "ScoreHunter_Na_Sirku.jpg";
+                    link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
                     
                     mapDiv.style.width = oW; mapDiv.style.height = oH; mapDiv.style.position = oPos; mapDiv.style.zIndex = oZ; mapDiv.style.top = oT; mapDiv.style.left = oL;
                     map.invalidateSize(); map.fitBounds(bounds, { padding: [20, 20] });
                     mapMarkers.forEach(m => { if (m.setIcon && m.options.markerType === 'waypoint') { m.setIcon(iconKrizik); } });
-                    if (scaleL) { scaleL.style.transform = 'scale(1)'; }
                     zoomControls.forEach(el => el.style.display = 'block'); btn.innerHTML = staryText; btn.style.background = "#e94560";
-                }).catch(err => { 
-                    mapDiv.style.width = oW; mapDiv.style.height = oH; mapDiv.style.position = oPos; mapDiv.style.zIndex = oZ; mapDiv.style.top = oT; mapDiv.style.left = oL;
-                    map.invalidateSize();
-                    mapMarkers.forEach(m => { if (m.setIcon && m.options.markerType === 'waypoint') { m.setIcon(iconKrizik); } });
-                    if (scaleL) { scaleL.style.transform = 'scale(1)'; }
-                    zoomControls.forEach(el => el.style.display = 'block'); btn.innerHTML = staryText; btn.style.background = "#e94560";
-                    alert("Chyba pri generovaní mapy.");
                 });
             }, 3000); 
         }
@@ -324,29 +269,16 @@
         window.potvrditSkore = function(skore) {
             document.getElementById('score-modal').style.display = 'none';
             if (!cakaSaNaSkorePreBod) return;
-            
             let finalFarba = '#FFD700'; 
-            if(skore === 10) finalFarba = '#4caf50'; 
-            else if (skore === 25) finalFarba = '#00BFFF'; 
-            else if (skore === 50) finalFarba = '#FFD700'; 
-            else if (skore === 100) finalFarba = '#e94560';
-
-            cakaSaNaSkorePreBod.skore = skore;
-            cakaSaNaSkorePreBod.farba = finalFarba;
-            
-            mojeOtocneBody.push(cakaSaNaSkorePreBod);
-            cakaSaNaSkorePreBod = null;
-            prekresliVsetkyBody();
+            if(skore === 10) finalFarba = '#4caf50'; else if (skore === 25) finalFarba = '#00BFFF'; else if (skore === 100) finalFarba = '#e94560';
+            cakaSaNaSkorePreBod.skore = skore; cakaSaNaSkorePreBod.farba = finalFarba;
+            mojeOtocneBody.push(cakaSaNaSkorePreBod); cakaSaNaSkorePreBod = null; prekresliVsetkyBody();
         }
 
-        window.zrusitSkore = function() {
-            document.getElementById('score-modal').style.display = 'none';
-            cakaSaNaSkorePreBod = null;
-        }
+        window.zrusitSkore = function() { document.getElementById('score-modal').style.display = 'none'; cakaSaNaSkorePreBod = null; }
 
         function mapClickAction(e) {
             const lat = e.latlng.lat; const lon = e.latlng.lng;
-            
             if (rezimKresleniaBrany) {
                 if (docasnyMarker) map.removeLayer(docasnyMarker);
                 document.getElementById('status-kreslenia').style.display = "none"; rezimKresleniaBrany = false;
@@ -361,7 +293,6 @@
                 mojeOtocneBody.push({ nazov: docasnyNazovBrany, typ: "gate", lat: lat1, lon: lon1, p1: p1, p2: p2, skore: 0, farba: 'black' });
                 prekresliVsetkyBody(); return;
             }
-            
             const cisloBodov = mojeOtocneBody.filter(b => b.typ === 'point').length + 1; 
             let pNazov = (mojeOtocneBody.length === 0) ? "START" : "Bod " + cisloBodov;
             const nazov = prompt("Názov bodu:", pNazov); if (!nazov) return; const nazovUpper = nazov.toUpperCase();
@@ -410,7 +341,6 @@
         function vykresliZoznamUlozenychTrati() { const ul = document.getElementById('ulozene-trate-list'); ul.innerHTML = ""; Object.keys(vsetkyTrate).forEach(m => { const li = document.createElement('li'); li.className = 'track-item'; li.innerText = m; li.onclick = () => { mojeOtocneBody = vsetkyTrate[m]; prekresliVsetkyBody(); }; ul.appendChild(li); }); }
         function vynulovatTrat() { mojeOtocneBody = []; prekresliVsetkyBody(); }
 
-        // TUTO JE TEN FIX PRE SCORE HUNTER GPX EXPORT!
         window.exportovatDoGPX = function() {
             if (mojeOtocneBody.length === 0) return alert("Zoznam bodov je prázdny!");
             let gpx = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="MPG Score Hunter">\n';
@@ -420,9 +350,7 @@
                 if (b.typ === 'point') { 
                     gpx += `    <desc>Hodnota: ${b.skore} bodov</desc>\n`; 
                 } else { 
-                    // Simulátor vyžaduje pre brány p1 a p2, pridali sme to sem späť
-                    let p1Str = b.p1 ? b.p1.join(',') : ''; 
-                    let p2Str = b.p2 ? b.p2.join(',') : '';
+                    let p1Str = b.p1 ? b.p1.join(',') : ''; let p2Str = b.p2 ? b.p2.join(',') : '';
                     gpx += `    <desc>MPG_META:typ=${b.typ};p1=${p1Str};p2=${p2Str}</desc>\n`; 
                 }
                 gpx += `  </wpt>\n`; 
@@ -460,8 +388,16 @@
                                 skore = parseInt(match[1]);
                                 if(skore === 10) farba = '#4caf50'; else if (skore === 25) farba = '#00BFFF'; else if (skore === 50) farba = '#FFD700'; else if (skore === 100) farba = '#e94560';
                             }
-                        } else if (nazov === "START" || nazov === "CIEL") {
-                            typ = "gate"; p1 = [lat - 0.0005, lon - 0.0005]; p2 = [lat + 0.0005, lon + 0.0005]; skore = 0; farba = 'black';
+                        } 
+                        
+                        // FIX: Ak GPX obsahuje START/CIEL ale bez nakreslených čiar, vytvoríme obrovskú horizontálnu 600m čiaru
+                        if (nazov === "START" || nazov === "CIEL") {
+                            if (!p1 || !p2) {
+                                typ = "gate"; 
+                                p1 = [lat, lon - 0.004]; 
+                                p2 = [lat, lon + 0.004]; 
+                                skore = 0; farba = 'black';
+                            }
                         }
                         mojeOtocneBody.push({ nazov: nazov, typ: typ, lat: lat, lon: lon, p1: p1, p2: p2, skore: skore, farba: farba });
                     }
@@ -498,17 +434,32 @@
                 let pl = L.polyline(trackPoints.map(p => [p.lat, p.lon]), { color: farbaLetu, weight: 3, opacity: 0.8 }).addTo(map);
                 pl.bindPopup(`<b>Pilot: ${menoPilota}</b>`); flightPolylines.push(pl);
 
-                let idxStart = -1; let idxCiel = -1;
+                let idxStart = -1; let moznyCiel = -1;
                 const startBod = mojeOtocneBody.find(b => b.nazov.includes("START")); 
                 const cielBod = mojeOtocneBody.find(b => b.nazov.includes("CIEL"));
                 
+                // FIX: Inteligentné vyhodnotenie štartu a cieľa
                 if (startBod && cielBod && startBod.p1 && cielBod.p1) {
-                    for (let i=1; i<trackPoints.length; i++) {
-                        if (idxStart === -1 && ciarySaPretinaju([trackPoints[i-1].lat, trackPoints[i-1].lon], [trackPoints[i].lat, trackPoints[i].lon], startBod.p1, startBod.p2)) idxStart = i;
-                        if (idxStart !== -1 && idxCiel === -1 && ciarySaPretinaju([trackPoints[i-1].lat, trackPoints[i-1].lon], [trackPoints[i].lat, trackPoints[i].lon], cielBod.p1, cielBod.p2)) idxCiel = i;
+                    for (let i = 1; i < trackPoints.length; i++) {
+                        let predchBod = [trackPoints[i-1].lat, trackPoints[i-1].lon];
+                        let aktBod = [trackPoints[i].lat, trackPoints[i].lon];
+                        
+                        if (idxStart === -1 && ciarySaPretinaju(predchBod, aktBod, startBod.p1, startBod.p2)) { 
+                            idxStart = i; 
+                            continue; 
+                        }
+                        
+                        // Ak už odštartoval, hľadáme posledné preťatie cieľa (ochrana 60 sekúnd voči "okamžitému" preťatiu)
+                        if (idxStart !== -1) {
+                            let casL = trackPoints[i].sekundy - trackPoints[idxStart].sekundy;
+                            if (casL > 60 && ciarySaPretinaju(predchBod, aktBod, cielBod.p1, cielBod.p2)) { 
+                                moznyCiel = i; 
+                            }
+                        }
                     }
                 }
 
+                let idxCiel = moznyCiel;
                 let maCas = (idxStart !== -1 && idxCiel !== -1 && idxCiel > idxStart);
                 let casBaseSec = maCas ? (trackPoints[idxCiel].sekundy - trackPoints[idxStart].sekundy) : 0;
                 
@@ -516,7 +467,6 @@
                 
                 if (maCas) {
                     let activeTrack = trackPoints.slice(idxStart, idxCiel + 1);
-                    
                     mojeOtocneBody.forEach(bod => {
                         if (bod.typ === 'point') {
                             let trafil = false;
