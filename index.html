@@ -87,7 +87,7 @@
     </div>
 
     <div class="card">
-        <h2>🎯 MPG Score Hunter <small style="font-size:12px; color:#ff9800;">v1.5 (Profi ICAO Odomknutie)</small></h2>
+        <h2>🎯 MPG Score Hunter <small style="font-size:12px; color:#ff9800;">v1.6 (Fix GPX exportu pre Simulátor)</small></h2>
         <input type="text" id="task-name-input" class="input-text" value="Score Hunter Let 1">
         
         <div class="setting-box" style="justify-content: space-between;">
@@ -185,6 +185,8 @@
                 
                 osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, crossOrigin: 'anonymous' });
                 topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, crossOrigin: 'anonymous' });
+                
+                openAipLayer = L.tileLayer('https://nwy-tiles-api.prod.newaydata.com/tiles/{z}/{x}/{y}.png?path=latest/aero/latest', { maxZoom: 14, crossOrigin: 'anonymous' });
                 
                 topoLayer.addTo(map);
                 L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 300 }).addTo(map);
@@ -408,14 +410,21 @@
         function vykresliZoznamUlozenychTrati() { const ul = document.getElementById('ulozene-trate-list'); ul.innerHTML = ""; Object.keys(vsetkyTrate).forEach(m => { const li = document.createElement('li'); li.className = 'track-item'; li.innerText = m; li.onclick = () => { mojeOtocneBody = vsetkyTrate[m]; prekresliVsetkyBody(); }; ul.appendChild(li); }); }
         function vynulovatTrat() { mojeOtocneBody = []; prekresliVsetkyBody(); }
 
+        // TUTO JE TEN FIX PRE SCORE HUNTER GPX EXPORT!
         window.exportovatDoGPX = function() {
             if (mojeOtocneBody.length === 0) return alert("Zoznam bodov je prázdny!");
             let gpx = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="MPG Score Hunter">\n';
             mojeOtocneBody.forEach((b, i) => { 
                 let bezpecnyNazov = b.nazov.replace(/"/g, '').replace(/'/g, '');
                 gpx += `  <wpt lat="${b.lat.toFixed(6)}" lon="${b.lon.toFixed(6)}">\n    <name>${bezpecnyNazov}</name>\n`;
-                if (b.typ === 'point') { gpx += `    <desc>Hodnota: ${b.skore} bodov</desc>\n`; } 
-                else { gpx += `    <desc>Typ: ${b.typ}</desc>\n`; }
+                if (b.typ === 'point') { 
+                    gpx += `    <desc>Hodnota: ${b.skore} bodov</desc>\n`; 
+                } else { 
+                    // Simulátor vyžaduje pre brány p1 a p2, pridali sme to sem späť
+                    let p1Str = b.p1 ? b.p1.join(',') : ''; 
+                    let p2Str = b.p2 ? b.p2.join(',') : '';
+                    gpx += `    <desc>MPG_META:typ=${b.typ};p1=${p1Str};p2=${p2Str}</desc>\n`; 
+                }
                 gpx += `  </wpt>\n`; 
             });
             gpx += `</gpx>`;
@@ -435,7 +444,17 @@
                         let nameNode = node.getElementsByTagName("name")[0]; let nazov = nameNode ? nameNode.textContent.replace(/^\d+\.\s*/, "").toUpperCase() : "BOD";
                         let descNode = node.getElementsByTagName("desc")[0]; let descText = descNode ? descNode.textContent : "";
                         let typ = "point"; let p1 = null; let p2 = null; let skore = 50; let farba = '#FFD700';
-                        if (descText && descText.includes("Hodnota:")) {
+                        
+                        if (descText && descText.startsWith("MPG_META:")) {
+                            let parts = descText.replace("MPG_META:", "").split(";");
+                            parts.forEach(p => {
+                                let kv = p.split("=");
+                                if (kv[0] === "typ") typ = kv[1];
+                                if (kv[0] === "p1" && kv[1]) p1 = kv[1].split(",").map(Number);
+                                if (kv[0] === "p2" && kv[1]) p2 = kv[1].split(",").map(Number);
+                            });
+                            if(typ === "gate") farba = 'black';
+                        } else if (descText && descText.includes("Hodnota:")) {
                             let match = descText.match(/Hodnota:\s*(\d+)/);
                             if (match) {
                                 skore = parseInt(match[1]);
