@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MPG Score Hunter Vyhodnocovač</title>
+    <title>MPG Score Hunter</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,41 +11,56 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        body { font-family: sans-serif; background: #141414; color: #fff; padding: 10px; margin: 0; }
-        .card { background: #222; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
-        h2, h3 { margin: 0 0 10px 0; }
-        .input-text { width: 100%; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #444; background: #1a1a1a; color: white; margin-bottom: 10px; font-size: 16px; }
+        body { font-family: sans-serif; background: #1a1a2e; color: #fff; padding: 10px; margin: 0; }
+        .card { background: #16213e; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.4); border: 1px solid #0f3460; }
+        h2, h3 { margin: 0 0 10px 0; color: #4caf50; }
+        .input-text { width: 100%; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #0f3460; background: #0f3460; color: white; margin-bottom: 10px; font-size: 16px; }
+        .setting-box { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: #0f3460; padding: 10px; border-radius: 5px; flex-wrap: wrap; }
+        .setting-box input { width: 70px; padding: 5px; text-align: center; font-weight: bold; background: #1a1a2e; color: white; border: 1px solid #555; border-radius: 4px; }
         
-        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 12px; background: #1a1a1a; padding: 10px; border-radius: 6px; border: 1px solid #333; }
-        .config-item { display: flex; flex-direction: column; font-size: 13px; color: #ccc; }
-        .config-item input { padding: 6px; margin-top: 4px; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; text-align: center; font-weight: bold; }
-
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         .btn { flex: 1; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; color: #fff; min-width: 100px; font-size: 14px; text-align: center; }
-        .btn-save { background: #4caf50; } .btn-gpx { background: #008CBA; } .btn-import-gpx { background: #8bc34a; } .btn-qr { background: #673ab7; } .btn-reset { background: #555; } .btn-csv { background: #00bcd4; } .btn-download { background: #e91e63; } .btn-print-table { background: #ff9800; }
+        .btn-save { background: #4caf50; } .btn-maptype { background: #3f51b5; } .btn-racer { background: #9c27b0; } .btn-gpx { background: #008CBA; } .btn-import-gpx { background: #8bc34a; color: white; } .btn-qr { background: #673ab7; } .btn-reset { background: #555; } .btn-csv { background: #00bcd4; } .btn-download { background: #e94560; } .btn-print-table { background: #ff9800; }
         
-        #map { width: 100%; height: 520px; border-radius: 8px; border: 2px solid #444; background: #e5e3df; display: block; }
+        #map { width: 100%; height: 500px; border-radius: 8px; border: 2px solid #555; background: #e5e3df; display: block; position: relative; z-index: 1; overflow: hidden; }
         
+        /* Mierka so zvislými čiarkami */
+        .leaflet-control-scale-line { 
+            background: rgba(255, 255, 255, 0.95) !important; 
+            border: 3px solid #000 !important; 
+            border-top: none !important; 
+            color: #000 !important; 
+            font-weight: bold !important; 
+            font-size: 18px !important; 
+            padding: 6px 8px 12px 8px !important; 
+            box-shadow: 0 0 5px rgba(0,0,0,0.5) !important; 
+            line-height: 1.2 !important; 
+            position: relative;
+            box-sizing: border-box;
+        }
+
         .track-list { list-style: none; padding: 0; display: flex; gap: 5px; flex-wrap: wrap; margin: 0 0 10px 0; }
-        .track-item { background: #333; padding: 6px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #444; font-size: 14px; }
-        .btn-del-single { background: #f44336; color: white; border: none; padding: 2px 6px; border-radius: 4px; margin-left: 10px; cursor: pointer; }
+        .track-item { background: #0f3460; padding: 6px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #4caf50; font-size: 14px; }
+        .btn-del-single { background: #e94560; color: white; border: none; padding: 2px 6px; border-radius: 4px; margin-left: 10px; cursor: pointer; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
         th, td { border: 1px solid #444; padding: 8px; text-align: center; vertical-align: middle; }
-        th { background: #2a2a2a; }
-        .penale-input, .name-input { padding: 6px; background: #141414; color: white; border: 1px solid #555; text-align: center; border-radius: 3px; font-size: 14px; box-sizing: border-box; }
-        .penale-input { width: 55px; } .name-input { width: 130px; text-align: left; font-weight: bold; }
+        th { background: #0f3460; color: #fff; }
+        .penale-input, .name-input { padding: 6px; background: #1a1a2e; color: white; border: 1px solid #444; text-align: center; border-radius: 3px; font-size: 14px; box-sizing: border-box; }
+        .penale-input { width: 65px; } .name-input { width: 130px; text-align: left; font-weight: bold; }
         .color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; border: 1px solid #fff; vertical-align: middle; }
+
+        .dnf-row { background: rgba(233, 69, 96, 0.2); }
+        .dnf-text { color: #e94560; font-weight: bold; font-size: 12px; }
         
-        /* Špeciálne mapové popisy hodnôt bodov */
-        .map-score-label { color: black; font-weight: bold; font-size: 12px; text-shadow: 0 0 3px white; text-align: center; }
+        .score-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; color: black; font-weight: bold; font-size: 12px; margin-left: 5px; }
 
         @media print {
             body { background: white; color: black; margin: 0; padding: 0; }
             body > div.card:not(#leaderboard-box) { display: none !important; }
-            #leaderboard-box { background: transparent; padding: 0; margin: 0; box-shadow: none; display: block !important; }
+            #leaderboard-box { background: transparent; padding: 0; margin: 0; box-shadow: none; display: block !important; border: none; }
             #leaderboard-box h3 { color: black !important; font-size: 18px; margin-bottom: 15px; }
-            .btn-group, button, .config-grid { display: none !important; }
+            .btn-group, button { display: none !important; }
             table { width: 100%; border-collapse: collapse; font-size: 11px; color: black; }
             th, td { border: 1px solid #000; padding: 5px; text-align: center; }
             th { background: #eee !important; -webkit-print-color-adjust: exact; color: black !important; font-weight: bold; }
@@ -59,28 +74,34 @@
 <body>
 
     <div class="card">
-        <h2>🎯 MPG Score Hunter Organizer</h2>
-        <input type="text" id="task-name-input" class="input-text" value="Score Hunter Task 1">
+        <h2>🎯 MPG Score Hunter <small style="font-size:12px; color:#ff9800;">v1.2 (Fixné body)</small></h2>
+        <input type="text" id="task-name-input" class="input-text" value="Score Hunter Let 1">
         
-        <div class="config-grid">
-            <div class="config-item">
-                <label>Časový limit (min):</label>
-                <input type="number" id="cfg-time-limit" value="60" min="1" onchange="vykresliLeaderboard()">
+        <div class="setting-box" style="justify-content: space-between;">
+            <div>
+                <label>Časový limit (minúty):</label>
+                <input type="number" id="cas-limit" value="60" min="1" onchange="vykresliLeaderboard()">
             </div>
-            <div class="config-item">
-                <label>Penále / min nad limit:</label>
-                <input type="number" id="cfg-penalty-rate" value="5" min="0" onchange="vykresliLeaderboard()">
+            <div>
+                <label>PRIEMER bodu (m):</label>
+                <input type="number" id="priemer-bodu" value="200" min="50" onchange="prekresliVsetkyBody()">
             </div>
-            <div class="config-item">
-                <label>Absolútny strop (min):</label>
-                <input type="number" id="cfg-max-overtime" value="15" min="0" onchange="vykresliLeaderboard()">
+            <div>
+                <label>Penále za minútu navyše (body):</label>
+                <input type="number" id="penale-minuta" value="20" min="0" onchange="vykresliLeaderboard()">
             </div>
+        </div>
+        <div style="font-size: 13px; color: #aaa; margin-bottom: 10px; text-align: center; font-weight: bold;">
+            <span style="color:#4caf50;">● Zelená (10b)</span> | 
+            <span style="color:#00BFFF;">● Modrá (25b)</span> | 
+            <span style="color:#FFD700;">● Žltá (50b)</span> | 
+            <span style="color:#e94560;">● Červená (100b)</span>
         </div>
 
         <div class="btn-group">
+            <button class="btn btn-maptype" onclick="prepniMapu()">Zmeniť mapu 🗺️</button>
             <button class="btn btn-save" onclick="ulozitTratDoPamate()">Uložiť trať 💾</button>
-            <button class="btn btn-download" onclick="stiahnutMapu()">Stiahnuť JPG 🖼️</button>
-            <button class="btn btn-gpx" onclick="exportovatDoGPX()">Stiahnuť GPX 🗺️</button>
+            <button class="btn btn-download" id="btn-download" onclick="stiahnutMapu()">HD A4 Tlač 🖼️</button>
             <button class="btn btn-import-gpx" onclick="document.getElementById('gpx-import-input').click()">Načítať GPX 📂</button>
             <input type="file" id="gpx-import-input" accept=".gpx" style="display:none;" onchange="importovatGPX(event)">
             <button class="btn btn-qr" onclick="zobrazitQR()">QR Kód 📱</button>
@@ -91,27 +112,27 @@
     </div>
 
     <div class="card">
-        <h3 style="color:#ff9800; display:none; text-align:center;" id="status-kreslenia">✏️ REŽIM BRÁNY: Klikni na mape, kde má brána KONČIŤ!</h3>
-        <div id="zoznam-bodov" style="font-size: 14px;"><em style="color:#aaa;">Klikaj do mapy pre pridanie bodov. ("START" alebo "CIEL" vytvorí časovú bránu)</em></div>
+        <h3 style="color:#ff9800; display:none; text-align:center;" id="status-kreslenia">✏️ REŽIM BRÁNY: Klikni smer, ktorým má byť brána otočená!</h3>
+        <div id="zoznam-bodov" style="font-size: 14px;"><em style="color:#aaa;">Klikaj do mapy pre pridanie bodov. ("START" alebo "CIEL" zapne kreslenie brány)</em></div>
     </div>
 
     <div class="card" style="padding:0; border:none; margin-bottom: 10px;">
         <div id="map"></div>
     </div>
-
+    
     <div class="card">
-        <h3>📥 Nahrávanie letov pretekárov (IGC)</h3>
+        <h3>📥 Nahrávanie letov (IGC)</h3>
         <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center; flex-wrap:wrap;">
-            <label>Počet očakávaných:</label>
-            <input type="number" id="pocet-pretekarov" value="0" min="0" style="width:60px; padding:6px; border-radius:4px; border:1px solid #555; background:#222; color:white; text-align:center;" onchange="vyhodnotStatus()">
+            <label>Počet pretekárov:</label>
+            <input type="number" id="pocet-pretekarov" value="0" min="0" style="width:60px; padding:6px; border-radius:4px; border:1px solid #555; background:#0f3460; color:white; text-align:center;" onchange="vyhodnotStatus()">
             <span id="upload-status" style="color:#aaa; font-size:14px; font-weight:bold;">Žiadne načítané lety</span>
         </div>
-        <label for="igc-input" style="display:block; background:#e67e22; padding:12px; border-radius:5px; text-align:center; cursor:pointer; font-weight:bold; color:white;">📂 VYBRAŤ IGC SÚBORY VŠETKÝCH PILOTOV</label>
+        <label for="igc-input" style="display:block; background:#4caf50; padding:12px; border-radius:5px; text-align:center; cursor:pointer; font-weight:bold; color:white;">📂 VYBRAŤ IGC SÚBORY</label>
         <input type="file" id="igc-input" accept=".igc" multiple style="display:none;">
     </div>
 
     <div class="card" id="leaderboard-box" style="display:none; overflow-x:auto;">
-        <h3>🏆 Výsledková listina (Score Hunter)</h3>
+        <h3>🏆 Výsledková listina - Score Hunter</h3>
         <div class="btn-group" style="margin-bottom:15px;">
             <button class="btn btn-csv" onclick="exportovatDoCSV()">Stiahnuť CSV 📊</button>
             <button class="btn btn-print-table" onclick="window.print()">Tlačiť výsledky 🖨️</button>
@@ -120,342 +141,342 @@
     </div>
 
     <script>
-        let mojeOtocneBody = []; let mapMarkers = []; let mapVisuals = []; let flightPolylines = []; let vsetkyTrate = {};
-        let vysledkyPiloti = []; let rezimKresleniaBrany = false; let docasnyNazovBrany = ""; let prvyBodBrany = null; let docasnyMarker = null; let map = null;
+        let mojeOtocneBody = []; let mapMarkers = []; let flightPolylines = []; let vsetkyTrate = {};
+        let vysledkyPiloti = []; let map = null;
+        let osmLayer, topoLayer; let aktualnyRezimMapy = 'topo'; 
         
-        const farbyPiloti = [
-            '#FF1493', '#00FFFF', '#FF4500', '#00FF00', '#FFD700', 
-            '#8A2BE2', '#0000FF', '#FF0000', '#32CD32', '#FF00FF', 
-            '#FFA500', '#008080', '#8B0000', '#000080', '#00FA9A', 
-            '#FF8C00', '#4B0082', '#FF69B4', '#00CED1', '#A52A2A', 
-            '#FFFF00', '#7FFF00', '#DC143C', '#00BFFF', '#9932CC'
-        ];
+        let rezimKresleniaBrany = false; let docasnyNazovBrany = ""; let prvyBodBrany = null; let docasnyMarker = null;
 
-        const bodIcon = L.divIcon({
-            className: 'custom-icon',
-            html: "<div style='background:#fff; width:12px; height:12px; border-radius:50%; border:3px solid #333; box-shadow:0 0 3px black;'></div>",
-            iconSize: [18, 18], iconAnchor: [9, 9]
-        });
+        const farbyPiloti = ['#00FFFF', '#FF1493', '#00FF00', '#FFD700', '#FF4500', '#8A2BE2', '#FFFFFF', '#FF00FF', '#32CD32', '#00BFFF'];
+
+        // Vytváranie SVG ikoniek
+        function getIconUrl() {
+            let svg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <line x1="50" y1="40" x2="50" y2="60" stroke="black" stroke-width="4"/>
+                <line x1="40" y1="50" x2="60" y2="50" stroke="black" stroke-width="4"/>
+            </svg>`;
+            return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+        }
+
+        const iconKrizik = L.icon({ iconUrl: getIconUrl(), iconSize: [34, 34], iconAnchor: [17, 17] });
+        const iconPrint = L.icon({ iconUrl: getIconUrl(), iconSize: [85, 85], iconAnchor: [42, 42] }); 
+
+        function getPolomer() { return (parseInt(document.getElementById('priemer-bodu').value) || 200) / 2; }
+        function getCasLimit() { return parseInt(document.getElementById('cas-limit').value) || 60; }
+        function getPenaleMinuta() { return parseInt(document.getElementById('penale-minuta').value) || 20; }
 
         function inicializujMapu() {
-            map = L.map('map').setView([48.461, 17.518], 11);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, crossOrigin: true }).addTo(map);
-            L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
-            nacitatVsetkyTrateZPamate();
-            map.on('click', mapClickAction);
-            setTimeout(() => { if(map) map.invalidateSize(); }, 500);
+            if (typeof L === 'undefined') { setTimeout(inicializujMapu, 300); return; }
+            if (map !== null) return; 
+            try {
+                map = L.map('map', { preferCanvas: true, zoomSnap: 0.1, zoomDelta: 0.1 }).setView([48.461, 17.518], 11);
+                
+                osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, crossOrigin: 'anonymous' });
+                topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, crossOrigin: 'anonymous' });
+                
+                topoLayer.addTo(map);
+                L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 300 }).addTo(map);
+                
+                nacitatVsetkyTrateZPamate();
+                map.on('click', mapClickAction);
+                setTimeout(() => { if(map) map.invalidateSize(); }, 300);
+
+                setInterval(() => {
+                    let scaleLines = document.querySelectorAll('.leaflet-control-scale-line');
+                    scaleLines.forEach(scaleLine => {
+                        if(!scaleLine.querySelector('.tick-container')) {
+                            let tc = document.createElement('div');
+                            tc.className = 'tick-container';
+                            tc.style.cssText = 'position:absolute; bottom:0; left:0; width:100%; height:8px; display:flex; justify-content:space-between;';
+                            for(let i=0; i<=5; i++) {
+                                let tick = document.createElement('div');
+                                tick.style.cssText = 'width:3px; height:8px; background:black;';
+                                tc.appendChild(tick);
+                            }
+                            scaleLine.appendChild(tc);
+                        }
+                    });
+                }, 1000);
+
+            } catch (error) { console.error("Chyba mapy:", error); }
+        }
+
+        window.prepniMapu = function() {
+            if (aktualnyRezimMapy === 'osm') {
+                map.removeLayer(osmLayer); topoLayer.addTo(map); aktualnyRezimMapy = 'topo';
+            } else {
+                map.removeLayer(topoLayer); osmLayer.addTo(map); aktualnyRezimMapy = 'osm';
+            }
         }
 
         window.stiahnutMapu = function() {
             if (mojeOtocneBody.length === 0) return alert("Najprv pridaj body na mapu!");
-            const uiControls = document.querySelector('.leaflet-control-container');
-            if(uiControls) uiControls.style.display = 'none';
-            let bodyPreZoom = [];
-            mojeOtocneBody.forEach(b => {
-                if (b.typ === "gate") { bodyPreZoom.push([b.p1[0], b.p1[1]], [b.p2[0], b.p2[1]]); } else { bodyPreZoom.push([b.lat, b.lon]); }
+            const btn = document.getElementById('btn-download'); const staryText = btn.innerHTML;
+            btn.innerHTML = "⏳ Generujem A4 Mapu..."; btn.style.background = "#ff9800";
+            const mapDiv = document.getElementById('map');
+            const zoomControls = document.querySelectorAll('.leaflet-control-zoom'); zoomControls.forEach(el => el.style.display = 'none');
+            const oW = mapDiv.style.width, oH = mapDiv.style.height, oPos = mapDiv.style.position, oZ = mapDiv.style.zIndex, oT = mapDiv.style.top, oL = mapDiv.style.left;
+
+            let bounds = L.latLngBounds(mojeOtocneBody.map(b => [b.lat, b.lon]));
+            let nw = bounds.getNorthWest(); let se = bounds.getSouthEast();
+            let dLat = Math.abs(nw.lat - se.lat); let dLon = Math.abs(nw.lng - se.lng) * Math.cos((nw.lat + se.lat) / 2 * Math.PI / 180);
+            
+            if (dLat > dLon) { mapDiv.style.width = '2480px'; mapDiv.style.height = '3508px'; } 
+            else { mapDiv.style.width = '3508px'; mapDiv.style.height = '2480px'; }
+            
+            mapDiv.style.position = 'absolute'; mapDiv.style.top = '0'; mapDiv.style.left = '0'; mapDiv.style.zIndex = '9999';
+            map.invalidateSize(); map.fitBounds(bounds, { padding: [60, 60] });
+
+            mapMarkers.forEach(m => {
+                if (m.setIcon && m.options.markerType === 'waypoint') { m.setIcon(iconPrint); }
             });
-            if (bodyPreZoom.length > 0) map.fitBounds(L.latLngBounds(bodyPreZoom), { padding: [30, 30] });
+
+            const scaleL = document.querySelector('.leaflet-control-scale-line');
+            if (scaleL) { scaleL.style.transform = 'scale(3)'; scaleL.style.transformOrigin = 'bottom left'; }
+
             setTimeout(() => {
-                html2canvas(document.getElementById('map'), { useCORS: true, allowTaint: false, scale: 2 }).then(canvas => {
-                    let link = document.createElement('a'); link.download = 'ScoreHunter_Mapa.jpg'; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
-                    if(uiControls) uiControls.style.display = 'block';
-                }).catch(err => { alert("Chyba: " + err); if(uiControls) uiControls.style.display = 'block'; });
-            }, 1000); 
+                html2canvas(mapDiv, { useCORS: true, allowTaint: false, scale: 1 }).then(canvas => {
+                    let link = document.createElement('a'); 
+                    let nazovSuboru = (dLat > dLon) ? "Mpg_ScoreHunter_Na_Vysku.jpg" : "Mpg_ScoreHunter_Na_Sirku.jpg";
+                    link.download = nazovSuboru; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
+                    
+                    mapDiv.style.width = oW; mapDiv.style.height = oH; mapDiv.style.position = oPos; mapDiv.style.zIndex = oZ; mapDiv.style.top = oT; mapDiv.style.left = oL;
+                    map.invalidateSize(); map.fitBounds(bounds, { padding: [20, 20] });
+                    mapMarkers.forEach(m => { if (m.setIcon && m.options.markerType === 'waypoint') { m.setIcon(iconKrizik); } });
+                    if (scaleL) { scaleL.style.transform = 'scale(1)'; }
+                    zoomControls.forEach(el => el.style.display = 'block'); btn.innerHTML = staryText; btn.style.background = "#e94560";
+                }).catch(err => { 
+                    mapDiv.style.width = oW; mapDiv.style.height = oH; mapDiv.style.position = oPos; mapDiv.style.zIndex = oZ; mapDiv.style.top = oT; mapDiv.style.left = oL;
+                    map.invalidateSize();
+                    mapMarkers.forEach(m => { if (m.setIcon && m.options.markerType === 'waypoint') { m.setIcon(iconKrizik); } });
+                    if (scaleL) { scaleL.style.transform = 'scale(1)'; }
+                    zoomControls.forEach(el => el.style.display = 'block'); btn.innerHTML = staryText; btn.style.background = "#e94560";
+                    alert("Chyba pri generovaní mapy.");
+                });
+            }, 3000); 
         }
+
+        const R = 6371000;
+        function getDist(lat1, lon1, lat2, lon2) { const dLat=(lat2-lat1)*Math.PI/180; const dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2); return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
 
         function mapClickAction(e) {
             const lat = e.latlng.lat; const lon = e.latlng.lng;
+            
             if (rezimKresleniaBrany) {
                 if (docasnyMarker) map.removeLayer(docasnyMarker);
                 document.getElementById('status-kreslenia').style.display = "none"; rezimKresleniaBrany = false;
-                mojeOtocneBody.push({ 
-                    nazov: docasnyNazovBrany, typ: "gate", score: 0, rozmer: 100,
-                    lat: (prvyBodBrany.lat + lat) / 2, lon: (prvyBodBrany.lon + lon) / 2, 
-                    p1: [prvyBodBrany.lat, prvyBodBrany.lon], p2: [lat, lon] 
-                });
+                
+                let lat1 = prvyBodBrany.lat; let lon1 = prvyBodBrany.lon; let sirka = 100; // Fixná šírka pre brány na Štarte a Cieli
+                
+                let dx = (lon - lon1) * Math.cos(lat1 * Math.PI / 180); let dy = (lat - lat1); let len = Math.sqrt(dx*dx + dy*dy);
+                let nx = 0, ny = 1; if(len > 0) { nx = dx / len; ny = dy / len; }
+                
+                let oLat = ny * sirka / 111320; let oLon = nx * sirka / (111320 * Math.cos(lat1 * Math.PI / 180));
+                let p1 = [lat1 + oLat, lon1 + oLon]; let p2 = [lat1 - oLat, lon1 - oLon];
+                
+                mojeOtocneBody.push({ nazov: docasnyNazovBrany, typ: "gate", lat: lat1, lon: lon1, p1: p1, p2: p2, skore: 0, farba: 'black' });
                 prekresliVsetkyBody(); return;
             }
-            const cisloBodov = mojeOtocneBody.length + 1; let pNazov = cisloBodov === 1 ? "START" : "Bod " + cisloBodov;
-            const nazov = prompt("Názov otočného bodu:", pNazov); if (!nazov) return; const nazovUpper = nazov.toUpperCase();
+            
+            const cisloBodov = mojeOtocneBody.filter(b => b.typ === 'point').length + 1; 
+            let pNazov = (mojeOtocneBody.length === 0) ? "START" : "Bod " + cisloBodov;
+            const nazov = prompt("Názov bodu:", pNazov); if (!nazov) return; const nazovUpper = nazov.toUpperCase();
             
             if (nazovUpper === "START" || nazovUpper === "CIEL") {
                 rezimKresleniaBrany = true; docasnyNazovBrany = nazovUpper; prvyBodBrany = { lat: lat, lon: lon };
-                docasnyMarker = L.marker([lat, lon], {icon: bodIcon}).addTo(map);
+                docasnyMarker = L.marker([lat, lon], {icon: iconKrizik}).addTo(map);
                 document.getElementById('status-kreslenia').style.display = "block";
             } else {
-                const bHodnota = parseInt(prompt("Bodová hodnota (napr. 10, 20, 30, 50):", "10")) || 10;
-                const radius = parseInt(prompt("Polomer valca (m):", "100")) || 100;
-                mojeOtocneBody.push({ nazov: nazovUpper, lat: lat, lon: lon, typ: "cylinder", rozmer: radius, score: bHodnota });
+                let validneBody = [10, 25, 50, 100];
+                let finalSkore = 50;
+                
+                while(true) {
+                    let skoreZadane = prompt("Zadaj počet bodov za tento otočák (povolené: 10, 25, 50, 100):", finalSkore);
+                    if (skoreZadane === null) return; // Zrušenie
+                    finalSkore = parseInt(skoreZadane);
+                    if (validneBody.includes(finalSkore)) {
+                        break;
+                    } else {
+                        alert("Neplatná hodnota! Musíš zadať len 10, 25, 50 alebo 100.");
+                    }
+                }
+                
+                // Farba podľa bodov
+                let finalFarba = '#FFD700'; 
+                if(finalSkore === 10) finalFarba = '#4caf50'; // Zelená
+                else if (finalSkore === 25) finalFarba = '#00BFFF'; // Modrá
+                else if (finalSkore === 50) finalFarba = '#FFD700'; // Žltá
+                else if (finalSkore === 100) finalFarba = '#e94560'; // Červená
+
+                mojeOtocneBody.push({ nazov: nazovUpper, lat: lat, lon: lon, typ: "point", skore: finalSkore, farba: finalFarba });
                 prekresliVsetkyBody();
             }
         }
 
         function prekresliVsetkyBody() {
-            mapMarkers.forEach(m => map.removeLayer(m)); mapVisuals.forEach(v => map.removeLayer(v));
-            mapMarkers = []; mapVisuals = [];
+            mapMarkers.forEach(m => map.removeLayer(m)); mapMarkers = [];
+            let polomer = getPolomer();
             
             mojeOtocneBody.forEach((b, i) => {
-                const marker = L.marker([b.lat, b.lon], {icon: bodIcon}).addTo(map).bindPopup(`<b>${b.nazov}</b><br>Hodnota: ${b.score}b`);
-                mapMarkers.push(marker);
-                
-                if (b.typ === "gate") { 
-                    mapVisuals.push(L.polyline([b.p1, b.p2], { color: '#ff9800', weight: 6 }).addTo(map)); 
+                if (b.typ === "gate" && b.p1 && b.p2) { 
+                    let vl = L.polyline([b.p1, b.p2], { color: 'black', weight: 8 }).addTo(map); mapMarkers.push(vl);
+                    let v2 = L.polyline([b.p1, b.p2], { color: '#ff9800', weight: 4 }).addTo(map); mapMarkers.push(v2);
+                    let marker = L.marker([b.lat, b.lon], {icon: iconKrizik, markerType: 'waypoint'}).addTo(map).bindPopup(`<b>${b.nazov}</b>`);
+                    mapMarkers.push(marker);
                 } else { 
-                    // Dynamické farby podľa bodovej hodnoty Score Huntera
-                    let farbaKruhu = 'green';
-                    if (b.score > 20 && b.score <= 40) farbaKruhu = 'blue';
-                    if (b.score > 40) farbaKruhu = 'red';
-
-                    mapVisuals.push(L.circle([b.lat, b.lon], { color: farbaKruhu, fillColor: farbaKruhu, fillOpacity: 0.12, radius: b.rozmer }).addTo(map)); 
-                    
-                    // Vpísanie bodovej hodnoty priamo do stredu kruhu na mape
-                    let textMarker = L.marker([b.lat, b.lon], {
-                        icon: L.divIcon({
-                            className: 'map-score-label',
-                            html: `+${b.score}`,
-                            iconSize: [30, 10], iconAnchor: [15, 5]
-                        })
-                    }).addTo(map);
-                    mapVisuals.push(textMarker);
+                    // Farebný kruh s polomerom a silnejším okrajom
+                    let kruh = L.circle([b.lat, b.lon], { color: b.farba, weight: 6, fillColor: b.farba, fillOpacity: 0.15, radius: polomer }).addTo(map);
+                    mapMarkers.push(kruh);
+                    // Mikro krížik v strede
+                    let marker = L.marker([b.lat, b.lon], {icon: iconKrizik, markerType: 'waypoint'}).addTo(map).bindPopup(`<b>${b.nazov} (${b.skore}b)</b>`);
+                    mapMarkers.push(marker);
                 }
             });
-            
+
             let html = '<ul style="list-style:none; padding:0; margin:0;">'; 
-            mojeOtocneBody.forEach((b, i) => { html += `<li style="margin-bottom:5px;"><strong>${i+1}. ${b.nazov}</strong> (${b.typ === 'gate' ? 'Brána' : 'Hodnota: ' + b.score + 'b | ' + b.rozmer + 'm'}) <button class="btn-del-single" onclick="zmazatBod(${i})">X</button></li>`; });
+            mojeOtocneBody.forEach((b, i) => { 
+                let textColor = (b.farba === '#FFD700' || b.farba === '#00BFFF') ? 'black' : 'white';
+                let badge = (b.typ === 'point') ? `<span class="score-badge" style="background:${b.farba}; color:${textColor};">${b.skore}b</span>` : ` <span style="color:#ff9800;font-weight:bold;">(Brána)</span>`;
+                html += `<li style="margin-bottom:5px;"><strong>${i+1}. ${b.nazov}</strong> ${badge} <button class="btn-del-single" onclick="zmazatBod(${i})">X</button></li>`; 
+            });
             document.getElementById('zoznam-bodov').innerHTML = html + '</ul>';
-            vykresliLeaderboard();
+            if(vysledkyPiloti.length > 0) vykresliLeaderboard();
         }
 
         window.zmazatBod = function(i) { mojeOtocneBody.splice(i, 1); prekresliVsetkyBody(); }
-        function ulozitTratDoPamate() { const meno = document.getElementById('task-name-input').value; if(!meno) return; vsetkyTrate[meno] = mojeOtocneBody; localStorage.setItem('mpg_sh_trate', JSON.stringify(vsetkyTrate)); vykresliZoznamUlozenychTrati(); }
-        function nacitatVsetkyTrateZPamate() { const d = localStorage.getItem('mpg_sh_trate'); if (d) { vsetkyTrate = JSON.parse(d); vykresliZoznamUlozenychTrati(); } }
+        function ulozitTratDoPamate() { const meno = document.getElementById('task-name-input').value; if(!meno) return; vsetkyTrate[meno] = mojeOtocneBody; localStorage.setItem('mpg_scorehunter_data', JSON.stringify(vsetkyTrate)); vykresliZoznamUlozenychTrati(); }
+        function nacitatVsetkyTrateZPamate() { try { const d = localStorage.getItem('mpg_scorehunter_data'); if (d) { vsetkyTrate = JSON.parse(d); vykresliZoznamUlozenychTrati(); } } catch (e) {} }
         function vykresliZoznamUlozenychTrati() { const ul = document.getElementById('ulozene-trate-list'); ul.innerHTML = ""; Object.keys(vsetkyTrate).forEach(m => { const li = document.createElement('li'); li.className = 'track-item'; li.innerText = m; li.onclick = () => { mojeOtocneBody = vsetkyTrate[m]; prekresliVsetkyBody(); }; ul.appendChild(li); }); }
         function vynulovatTrat() { mojeOtocneBody = []; prekresliVsetkyBody(); document.getElementById('qrcode-container').style.display="none"; }
-        function zobrazitQR() { const qrBox = document.getElementById('qrcode-container'); qrBox.innerHTML = "<h4 style='color:black; margin:0 0 10px 0;'>Naskenovať Lovcov Bodov</h4>"; const minified = mojeOtocneBody.map(b => `${b.nazov}|${b.score}|${b.lat.toFixed(5)}|${b.lon.toFixed(5)}`).join(';'); new QRCode(qrBox, { text: minified, width: 200, height: 200 }); qrBox.style.display = "block"; }
+        function zobrazitQR() {} // Pre Score Hunter zatial neriesime QR kvoli poctu bodov
+        window.exportovatDoGPX = function() {} // Pre Score Hunter GPX na body nie je potrebne na trase
 
-        // --- EXPORT GPX SO SCORE HUNTER METADÁTAMI ---
-        window.exportovatDoGPX = function() {
-            if (mojeOtocneBody.length === 0) return alert("Zoznam bodov je prázdny!");
-            let spojitCiara = confirm("Chceš pospájať body orientačnou čiarou?");
-            
-            let gpx = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="MPG Score Hunter" xmlns="http://www.topografix.com/GPX/1/1">\n';
-            mojeOtocneBody.forEach((b, i) => { 
-                gpx += `<wpt lat="${b.lat.toFixed(6)}" lon="${b.lon.toFixed(6)}">\n  <name>${i+1}. ${b.nazov} (${b.score}b)</name>\n`;
-                let p1Str = b.p1 ? b.p1.join(',') : ''; let p2Str = b.p2 ? b.p2.join(',') : '';
-                gpx += `  <desc>MPG_META:typ=${b.typ};rozmer=${b.rozmer || 100};score=${b.score || 0};p1=${p1Str};p2=${p2Str}</desc>\n</wpt>\n`; 
-            });
-            if (spojitCiara) {
-                gpx += `<rte>\n  <name>Orientačná trasa</name>\n`;
-                mojeOtocneBody.forEach(b => { gpx += `  <rtept lat="${b.lat.toFixed(6)}" lon="${b.lon.toFixed(6)}"></rtept>\n`; });
-                gpx += `</rte>\n`;
-            }
-            gpx += '</gpx>';
-            const blob = new Blob([gpx], { type: 'application/gpx+xml' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "ScoreHunter_Trasa.gpx"; a.click();
-        }
-
-        // --- SPÄTNÝ IMPORT GPX S BODOVÝMI HODNOTAMI ---
-        window.importovatGPX = function(e) {
-            const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                try {
-                    const parser = new DOMParser(); const xmlDoc = parser.parseFromString(evt.target.result, "text/xml");
-                    const wpts = xmlDoc.getElementsByTagName("wpt"); if (wpts.length === 0) return alert("Nenašli sa žiadne body.");
-                    mojeOtocneBody = [];
-                    for (let i = 0; i < wpts.length; i++) {
-                        let node = wpts[i]; let lat = parseFloat(node.getAttribute("lat")); let lon = parseFloat(node.getAttribute("lon"));
-                        let nameNode = node.getElementsByTagName("name")[0]; let nazov = nameNode ? nameNode.textContent : "Bod";
-                        nazov = nazov.replace(/^\d+\.\s*/, "").split(" (")[0].toUpperCase();
-                        let descNode = node.getElementsByTagName("desc")[0]; let descText = descNode ? descNode.textContent : "";
-                        let typ = "cylinder"; let rozmer = 100; let score = 10; let p1 = null; let p2 = null;
-
-                        if (descText && descText.startsWith("MPG_META:")) {
-                            let parts = descText.replace("MPG_META:", "").split(";");
-                            parts.forEach(p => {
-                                let kv = p.split("=");
-                                if (kv[0] === "typ") typ = kv[1];
-                                if (kv[0] === "rozmer") rozmer = parseInt(kv[1]) || 100;
-                                if (kv[0] === "score") score = parseInt(kv[1]) || 0;
-                                if (kv[0] === "p1" && kv[1]) p1 = kv[1].split(",").map(Number);
-                                if (kv[0] === "p2" && kv[1]) p2 = kv[1].split(",").map(Number);
-                            });
-                        }
-                        mojeOtocneBody.push({ nazov: nazov, typ: typ, lat: lat, lon: lon, rozmer: rozmer, score: score, p1: p1, p2: p2 });
-                    }
-                    prekresliVsetkyBody();
-                    alert("Lovci bodov úspešne importovaní!");
-                } catch(err) { alert("Chyba importu: " + err); }
-            };
-            reader.readAsText(file); e.target.value = ""; 
-        }
-
-        function parseCoord(str, isLon) { let d = parseFloat(str.substring(0, isLon ? 3 : 2)); let m = parseFloat(str.substring(isLon ? 3 : 2)) / 60000; return d + m; }
-        function getDist(lat1, lon1, lat2, lon2) { const R=6371000; const dLat=(lat2-lat1)*Math.PI/180; const dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2); return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
         function ciarySaPretinaju(A,B,C,D) { function ccw(p1,p2,p3){return(p3[0]-p1[0])*(p2[1]-p1[1])>(p2[0]-p1[0])*(p3[1]-p1[1]);} return(ccw(A,C,D)!==ccw(B,C,D))&&(ccw(A,B,C)!==ccw(A,B,D)); }
-        function formatCas(s) { const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); const sec = s%60; return (h>0?h+"h ":"")+m+"m "+sec+"s"; }
+        function formatCas(s) { const m = Math.floor(s/60); const sec = s%60; return m+"m "+sec+"s"; }
+        function parseCoord(str, isLon) { let d = parseFloat(str.substring(0, isLon ? 3 : 2)); let m = parseFloat(str.substring(isLon ? 3 : 2)) / 60000; return d + m; }
         const citajSubor = (file) => new Promise((resolve) => { const reader = new FileReader(); reader.onload = (e) => resolve({ text: e.target.result, file: file.name }); reader.readAsText(file); });
 
-        // --- PREMYSLEENÉ VYHODNOCOVANIE LETOV PRE SCORE HUNTER ---
         document.getElementById('igc-input').addEventListener('change', async function(e) {
-            const files = Array.from(e.target.files); if (files.length === 0) return;
+            const files = Array.from(e.target.files); if (files.length === 0 || mojeOtocneBody.length < 2) return;
             vysledkyPiloti = []; flightPolylines.forEach(pl => map.removeLayer(pl)); flightPolylines = [];
             const results = await Promise.all(files.map(f => citajSubor(f)));
+            let polomer = getPolomer();
             
             results.forEach((res, indexLetu) => {
-                let menoPilota = res.file.replace('.igc',''); let trackPoints = []; let maxAlt = -9999; let minAlt = 99999;
+                let menoPilota = res.file.replace('.igc',''); let trackPoints = [];
                 res.text.split(/\r?\n/).forEach(r => {
                     if (r.startsWith('H') && r.toUpperCase().includes('PILOT')) { const idx = r.indexOf(':'); if(idx !== -1) { let mozne = r.substring(idx+1).trim(); if(mozne) menoPilota = mozne; } }
                     if (r.startsWith('B') && r.length >= 24) { 
                         const cStr = r.substring(1, 7); const lat = parseCoord(r.substring(7, 15), false); const lon = parseCoord(r.substring(15, 24), true); const sec = parseInt(cStr.substring(0,2))*3600 + parseInt(cStr.substring(2,4))*60 + parseInt(cStr.substring(4,6)); 
                         trackPoints.push({ lat: lat, lon: lon, sekundy: sec });
-                        if (r.length >= 35) { let gAlt = parseInt(r.substring(30, 35)); if (!isNaN(gAlt) && gAlt > 0) { if (gAlt > maxAlt) maxAlt = gAlt; if (gAlt < minAlt) minAlt = gAlt; } }
                     }
                 });
 
                 let farbaLetu = farbyPiloti[indexLetu % farbyPiloti.length];
-                let pl = L.polyline(trackPoints.map(p => [p.lat, p.lon]), { color: farbaLetu, weight: 4, opacity: 0.85 }).addTo(map);
+                let pl = L.polyline(trackPoints.map(p => [p.lat, p.lon]), { color: farbaLetu, weight: 3, opacity: 0.8 }).addTo(map);
                 pl.bindPopup(`<b>Pilot: ${menoPilota}</b>`); flightPolylines.push(pl);
 
-                let trafilStart = false; let casStartu = 0;
-                let trafilCiel = false;  let casCiela = 0;
-                let bodyUlovokTrasa = 0;
-                let pocetObletenych = 0;
-
-                // Prechádzame otočáky - unikátna kontrola preletu (každý len raz)
-                mojeOtocneBody.forEach(bod => {
-                    let preleteny = false;
-                    if (bod.typ === "gate") { 
-                        for (let i=1; i<trackPoints.length; i++) { 
-                            if (ciarySaPretinaju([trackPoints[i-1].lat, trackPoints[i-1].lon], [trackPoints[i].lat, trackPoints[i].lon], bod.p1, bod.p2)) { preleteny = true; if(bod.nazov === "START" && !trafilStart) casStartu = trackPoints[i].sekundy; if(bod.nazov === "CIEL") casCiela = trackPoints[i].sekundy; break; } 
-                        } 
-                    } else { 
-                        for (let i=0; i<trackPoints.length; i++) { 
-                            if (getDist(trackPoints[i].lat, trackPoints[i].lon, bod.lat, bod.lon) <= bod.rozmer) { preleteny = true; break; } 
-                        } 
+                let idxStart = -1; let idxCiel = -1;
+                const startBod = mojeOtocneBody.find(b => b.nazov.includes("START")); 
+                const cielBod = mojeOtocneBody.find(b => b.nazov.includes("CIEL"));
+                
+                if (startBod && cielBod && startBod.p1 && cielBod.p1) {
+                    for (let i=1; i<trackPoints.length; i++) {
+                        if (idxStart === -1 && ciarySaPretinaju([trackPoints[i-1].lat, trackPoints[i-1].lon], [trackPoints[i].lat, trackPoints[i].lon], startBod.p1, startBod.p2)) idxStart = i;
+                        if (idxStart !== -1 && idxCiel === -1 && ciarySaPretinaju([trackPoints[i-1].lat, trackPoints[i-1].lon], [trackPoints[i].lat, trackPoints[i].lon], cielBod.p1, cielBod.p2)) idxCiel = i;
                     }
+                }
+
+                let maCas = (idxStart !== -1 && idxCiel !== -1 && idxCiel > idxStart);
+                let casBaseSec = maCas ? (trackPoints[idxCiel].sekundy - trackPoints[idxStart].sekundy) : 0;
+                
+                let nazbieraneBody = 0; let ziskaneOtocaky = [];
+                
+                if (maCas) {
+                    let activeTrack = trackPoints.slice(idxStart, idxCiel + 1);
                     
-                    if (preleteny) {
-                        if (bod.nazov === "START") trafilStart = true;
-                        else if (bod.nazov === "CIEL") trafilCiel = true;
-                        else {
-                            bodyUlovokTrasa += bod.score; // Pripíše presnú hodnotu Lovca bodov
-                            pocetObletenych++;
+                    mojeOtocneBody.forEach(bod => {
+                        if (bod.typ === 'point') {
+                            let trafil = false;
+                            for(let i = 0; i < activeTrack.length; i++) {
+                                if (getDist(activeTrack[i].lat, activeTrack[i].lon, bod.lat, bod.lon) <= polomer) { trafil = true; break; }
+                            }
+                            if (trafil) { nazbieraneBody += bod.skore; ziskaneOtocaky.push(bod.nazov); }
                         }
-                    }
-                });
+                    });
+                }
 
-                let maCas = trafilStart && trafilCiel;
-                let casBase = maCas ? Math.abs(casCiela - casStartu) : 0;
-                if (minAlt === 99999) minAlt = 0; if (maxAlt === -9999) maxAlt = 0;
-
-                vysledkyPiloti.push({ 
-                    meno: menoPilota, splnene: pocetObletenych, bodyTrasa: bodyUlovokTrasa, 
-                    casBase: casBase, penaleRucne: 0, maCas: maCas, farba: farbaLetu, minV: minAlt, maxV: maxAlt, statusCas: "" 
-                });
+                vysledkyPiloti.push({ meno: menoPilota, maCas: maCas, casBaseSec: casBaseSec, nazbieraneBody: nazbieraneBody, ziskaneOtocaky: ziskaneOtocaky.join(', '), penaleRucne: 0 });
             });
-            vyhodnotStatus(); if(flightPolylines.length > 0 && map) map.fitBounds(flightPolylines[0].getBounds());
-            vykresliLeaderboard();
+            vyhodnotStatus(); vykresliLeaderboard();
         });
 
         window.vyhodnotStatus = function() {
-            const pocetCakanych = parseInt(document.getElementById('pocet-pretekarov').value) || 0; const pocetNahratych = vysledkyPiloti.length; const statusEl = document.getElementById('upload-status');
-            if (pocetCakanych > 0) {
-                if (pocetNahratych === pocetCakanych) { statusEl.innerHTML = `✅ Všetky lety nahraté (${pocetNahratych}/${pocetCakanych})`; statusEl.style.color = '#4caf50'; } 
-                else if (pocetNahratych < pocetCakanych) { statusEl.innerHTML = `⚠️ Chýbajú lety (${pocetNahratych}/${pocetCakanych})`; statusEl.style.color = '#ff9800'; }
-                else { statusEl.innerHTML = `❓ Viac letov ako pretekárov (${pocetNahratych}/${pocetCakanych})`; statusEl.style.color = '#e91e63'; }
-            } else { statusEl.innerHTML = `✅ Načítané lety: ${pocetNahratych}`; statusEl.style.color = '#4caf50'; }
+            const cakanych = parseInt(document.getElementById('pocet-pretekarov').value) || 0; const nahratych = vysledkyPiloti.length; const st = document.getElementById('upload-status');
+            if (cakanych > 0) {
+                if (nahratych === cakanych) { st.innerHTML = `✅ ${nahratych}/${cakanych}`; st.style.color = '#4caf50'; } 
+                else if (nahratych < cakanych) { st.innerHTML = `⚠️ ${nahratych}/${cakanych}`; st.style.color = '#ff9800'; }
+                else { st.innerHTML = `❓ Viac letov (${nahratych}/${cakanych})`; st.style.color = '#e94560'; }
+            } else { st.innerHTML = `✅ Načítané: ${nahratych}`; st.style.color = '#4caf50'; }
         }
 
-        window.zmenMeno = function(index, noveMeno) { vysledkyPiloti[index].meno = noveMeno; }
-        window.zmenPenaleRucne = function(index, val) { vysledkyPiloti[index].penaleRucne = parseInt(val) || 0; vykresliLeaderboard(); }
+        window.zmenMeno = function(idx, val) { vysledkyPiloti[idx].meno = val; }
+        window.zmenPenale = function(idx, val) { vysledkyPiloti[idx].penaleRucne = parseInt(val) || 0; vykresliLeaderboard(); }
 
-        // --- MATEMATIKA SCORE HUNTERA: KONTROLA ČASOVÉHO LIMITU A PENALIZÁCIE ---
-        function vyhodnotScoreHunterBody(p, tLimitMin, pSadzbaBody, mStropMin) {
-            if (!p.maCas) { p.statusCas = "Nedokončil (Chýba brána)"; return 0; }
+        window.vykresliLeaderboard = function() {
+            if(vysledkyPiloti.length === 0) return; document.getElementById('leaderboard-box').style.display = "block";
             
-            let letenCasMin = p.casBase / 60;
-            let limitSekundy = tLimitMin * 60;
-            let maxStropSekundy = (tLimitMin + mStropMin) * 60;
-
-            if (p.casBase > maxStropSekundy) {
-                p.statusCas = "PREKROČENÝ STROP (0b)";
-                return 0; // Absolútny strop pretekov - diskvalifikácia na 0 bodov
-            }
-
-            let pCasBody = 0;
-            if (p.casBase > limitSekundy) {
-                let nadLimitSekundy = p.casBase - limitSekundy;
-                let nadLimitMinutyZacate = Math.ceil(nadLimitSekundy / 60); // Každá začatá minúta sa trestá
-                pCasBody = nadLimitMinutyZacate * pSadzbaBody;
-                p.statusCas = `+${nadLimitMinutyZacate} min nad limit (-${pCasBody}b)`;
-            } else {
-                p.statusCas = "V limite v poriadku";
-            }
-
-            let final = p.bodyTrasa - pCasBody - p.penaleRucne;
-            return final > 0 ? final : 0;
-        }
-
-        function vykresliLeaderboard() {
-            if(vysledkyPiloti.length === 0) return;
-            document.getElementById('leaderboard-box').style.display = "block";
+            let limitSec = getCasLimit() * 60;
+            let penalZaMin = getPenaleMinuta();
             
-            // Načítanie aktuálnych pravidiel z horných políčok
-            let tLimitMin = parseInt(document.getElementById('cfg-time-limit').value) || 60;
-            let pSadzbaBody = parseInt(document.getElementById('cfg-penalty-rate').value) || 5;
-            let mStropMin = parseInt(document.getElementById('cfg-max-overtime').value) || 15;
-
             vysledkyPiloti.forEach(p => {
-                p.bodySpolu = vyhodnotScoreHunterBody(p, tLimitMin, pSadzbaBody, mStropMin);
+                if (!p.maCas) { p.celkovo = 0; p.penaleCasStr = "0"; return; }
+                
+                let minutyNavyse = 0;
+                if (p.casBaseSec > limitSec) {
+                    let sekundyNavyse = p.casBaseSec - limitSec;
+                    minutyNavyse = Math.ceil(sekundyNavyse / 60);
+                }
+                
+                let penaleZaCasBody = minutyNavyse * penalZaMin;
+                p.penaleCasStr = minutyNavyse > 0 ? `-${penaleZaCasBody}b (${minutyNavyse}m)` : "0b";
+                
+                p.celkovo = p.nazbieraneBody - penaleZaCasBody - p.penaleRucne;
             });
-
-            // SPRAVODLIVÉ ZORADENIE: Primárne body, sekundárne kratší čas letu (Tie-breaker)!
-            vysledkyPiloti.sort((a, b) => {
-                if (b.bodySpolu !== a.bodySpolu) return b.bodySpolu - a.bodySpolu;
-                const casA = a.maCas ? a.casBase : Infinity;
-                const casB = b.maCas ? b.casBase : Infinity;
-                return casA - casB; // Kratší čas vyhráva pri zhluku rovnakých bodov
-            });
+            
+            vysledkyPiloti.sort((a, b) => b.celkovo - a.celkovo);
 
             let html = `<table><tr>
-                <th>#</th>
-                <th style="text-align:left;">Pilot (Upraviť meno)</th>
-                <th>Ulovené body<br><small>(Počet otočákov)</small></th>
-                <th style="color:#2196F3;">Základ<br><small>Trasa</small></th>
-                <th>Celkový Čas Letu</th>
-                <th>Časový Status disciplíny</th>
-                <th>Ručné Penále<br><small>(body)</small></th>
-                <th style="color:#e91e63;">Letová Výška<br><small>(Min / Max)</small></th>
-                <th style="color:#4caf50; font-size:14px;">BODY SPOLU</th>
+                <th>#</th><th style="text-align:left;">Pilot</th><th>Čas letu<br><small>(Limit: ${getCasLimit()}m)</small></th><th>Získané Body<br><small>(Otočáky)</small></th><th>Zoznam bodov</th><th style="color:#e94560;">Penále Čas<br><small>(-${penalZaMin}b/min)</small></th><th style="color:#ff9800;">Ostatné Penále<br><small>(zápis)</small></th><th style="color:#4caf50; font-size:14px;">CELKOVO SCORE</th>
             </tr>`;
             
             vysledkyPiloti.forEach((p, i) => {
-                let celkovyCasStr = p.maCas ? formatCas(p.casBase) : "Nedokončil";
-                let riadokStyle = p.bodySpolu === 0 ? "background: #2a1414; opacity:0.8;" : "";
-                let statusColor = p.statusCas.includes("PREKROČENÝ") ? "color:#f44336; font-weight:bold;" : "color:#aaa;";
-
-                html += `<tr style="${riadokStyle}">
+                let statusRiadok = !p.maCas ? 'class="dnf-row"' : '';
+                let casL = p.maCas ? formatCas(p.casBaseSec) : "<span class='dnf-text'>Mimo trate / Bez Štartu</span>";
+                
+                html += `<tr ${statusRiadok}>
                     <td>${i+1}</td>
                     <td style="text-align:left; white-space:nowrap;"><span class="color-dot" style="background:${p.farba};"></span><input type="text" class="name-input" value="${p.meno}" onchange="zmenMeno(${i}, this.value)"></td>
-                    <td><b>${p.bodyTrasa} bodov</b><br><small style='color:#aaa;'>(${p.splnene} otočákov)</small></td>
-                    <td style="color:#2196F3; font-weight:bold;">${p.bodyTrasa}</td>
-                    <td style="font-weight:bold; color:#fff;">${celkovyCasStr}</td>
-                    <td style="${statusColor} font-size:12px;">${p.statusCas}</td>
-                    <td><input type="number" class="penale-input" value="${p.penaleRucne}" onchange="zmenPenaleRucne(${i}, this.value)"></td>
-                    <td style="color:#e91e63; font-weight:bold;">${p.minV}m / ${p.maxV}m</td>
-                    <td style="background:#1a1a1a; color:#4caf50; font-weight:bold; font-size:16px;">${p.bodySpolu}</td>
+                    <td>${casL}</td>
+                    <td style="color:#00bcd4; font-weight:bold;">${p.nazbieraneBody}</td>
+                    <td style="font-size:11px;">${p.ziskaneOtocaky}</td>
+                    <td style="color:#e94560;">${p.penaleCasStr}</td>
+                    <td><input type="number" class="penale-input" value="${p.penaleRucne}" onchange="zmenPenale(${i}, this.value)"></td>
+                    <td style="background:#0f3460; color:#4caf50; font-weight:bold; font-size:15px;">${p.celkovo}</td>
                 </tr>`;
             });
             html += `</table>`; document.getElementById('leaderboard-table-container').innerHTML = html;
         }
 
         window.exportovatDoCSV = function() {
-            let csv = "\uFEFFPoradie;Pilot;Pocet otocakov;Zaklad body;Cas letu (s);Status casu;Rucne penale (body);Min vyska (m);Max vyska (m);CELKOVE BODY\n";
-            vysledkyPiloti.forEach((p, i) => { csv += `${i+1};${p.meno};${p.splnene};${p.bodyTrasa};${p.casBase};${p.statusCas};${p.penaleRucne};${p.minV};${p.maxV};${p.bodySpolu}\n`; });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "ScoreHunter_Vysledky.csv"; a.click();
+            let csv = "\uFEFFPoradie;Pilot;Cas letu;Ziskane body;Penale za cas;Ostatne penale;CELKOVE SCORE\n";
+            vysledkyPiloti.forEach((p, i) => { csv += `${i+1};${p.meno};${p.casBaseSec};${p.nazbieraneBody};${p.penaleCasStr};${p.penaleRucne};${p.celkovo}\n`; });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = "ScoreHunter_Vysledky.csv"; a.click();
         }
 
-        inicializujMapu();
+        document.addEventListener("DOMContentLoaded", inicializujMapu);
+        setTimeout(inicializujMapu, 400);
     </script>
 </body>
 </html>
