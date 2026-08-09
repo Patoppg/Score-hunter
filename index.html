@@ -24,19 +24,11 @@
         
         #map { width: 100%; height: 500px; border-radius: 8px; border: 2px solid #555; background: #e5e3df; display: block; position: relative; z-index: 1; overflow: hidden; }
         
-        /* Mierka so zvislými čiarkami */
         .leaflet-control-scale-line { 
             background: rgba(255, 255, 255, 0.95) !important; 
-            border: 3px solid #000 !important; 
-            border-top: none !important; 
-            color: #000 !important; 
-            font-weight: bold !important; 
-            font-size: 18px !important; 
-            padding: 6px 8px 12px 8px !important; 
-            box-shadow: 0 0 5px rgba(0,0,0,0.5) !important; 
-            line-height: 1.2 !important; 
-            position: relative;
-            box-sizing: border-box;
+            border: 3px solid #000 !important; border-top: none !important; color: #000 !important; 
+            font-weight: bold !important; font-size: 18px !important; padding: 6px 8px 12px 8px !important; 
+            box-shadow: 0 0 5px rgba(0,0,0,0.5) !important; line-height: 1.2 !important; position: relative; box-sizing: border-box;
         }
 
         .track-list { list-style: none; padding: 0; display: flex; gap: 5px; flex-wrap: wrap; margin: 0 0 10px 0; }
@@ -52,8 +44,19 @@
 
         .dnf-row { background: rgba(233, 69, 96, 0.2); }
         .dnf-text { color: #e94560; font-weight: bold; font-size: 12px; }
-        
         .score-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; color: black; font-weight: bold; font-size: 12px; margin-left: 5px; }
+
+        /* Klikacie menu na body */
+        #score-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 10000;
+        }
+        .modal-content {
+            background: #16213e; padding: 20px; border-radius: 8px; border: 2px solid #e94560; text-align: center; max-width: 320px;
+        }
+        .score-btn {
+            display: inline-block; margin: 5px; padding: 15px 0; width: 110px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; border: 2px solid white; color: black; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
 
         @media print {
             body { background: white; color: black; margin: 0; padding: 0; }
@@ -73,13 +76,29 @@
 </head>
 <body>
 
+    <!-- Plávajúce okno pre výber bodov -->
+    <div id="score-modal">
+        <div class="modal-content">
+            <h3 style="color: white; margin-top: 0; margin-bottom: 20px;">Vyber bodovú hodnotu</h3>
+            <div style="margin-bottom: 5px;">
+                <button class="score-btn" style="background: #4caf50;" onclick="potvrditSkore(10)">10 b</button>
+                <button class="score-btn" style="background: #00BFFF;" onclick="potvrditSkore(25)">25 b</button>
+            </div>
+            <div>
+                <button class="score-btn" style="background: #FFD700;" onclick="potvrditSkore(50)">50 b</button>
+                <button class="score-btn" style="background: #e94560;" onclick="potvrditSkore(100)">100 b</button>
+            </div>
+            <button style="margin-top: 25px; padding: 12px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; font-size: 16px;" onclick="zrusitSkore()">Zrušiť (Vymazať bod)</button>
+        </div>
+    </div>
+
     <div class="card">
-        <h2>🎯 MPG Score Hunter <small style="font-size:12px; color:#ff9800;">v1.2 (Fixné body)</small></h2>
+        <h2>🎯 MPG Score Hunter <small style="font-size:12px; color:#ff9800;">v1.3 (ICAO Mapa a GPX)</small></h2>
         <input type="text" id="task-name-input" class="input-text" value="Score Hunter Let 1">
         
         <div class="setting-box" style="justify-content: space-between;">
             <div>
-                <label>Časový limit (minúty):</label>
+                <label>Časový limit (min):</label>
                 <input type="number" id="cas-limit" value="60" min="1" onchange="vykresliLeaderboard()">
             </div>
             <div>
@@ -87,7 +106,7 @@
                 <input type="number" id="priemer-bodu" value="200" min="50" onchange="prekresliVsetkyBody()">
             </div>
             <div>
-                <label>Penále za minútu navyše (body):</label>
+                <label>Penále za min (body):</label>
                 <input type="number" id="penale-minuta" value="20" min="0" onchange="vykresliLeaderboard()">
             </div>
         </div>
@@ -99,15 +118,16 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn btn-maptype" onclick="prepniMapu()">Zmeniť mapu 🗺️</button>
+            <button class="btn btn-racer" onclick="prepniRezimPretekara()">Pretekár (Skryť čiary) 👁️</button>
+            <button class="btn btn-maptype" onclick="prepniMapu()">Mapa: TOPO 🗺️</button>
             <button class="btn btn-save" onclick="ulozitTratDoPamate()">Uložiť trať 💾</button>
             <button class="btn btn-download" id="btn-download" onclick="stiahnutMapu()">HD A4 Tlač 🖼️</button>
+            
+            <button class="btn btn-gpx" onclick="exportovatDoGPX()">Stiahnuť GPX 📍</button>
             <button class="btn btn-import-gpx" onclick="document.getElementById('gpx-import-input').click()">Načítať GPX 📂</button>
             <input type="file" id="gpx-import-input" accept=".gpx" style="display:none;" onchange="importovatGPX(event)">
-            <button class="btn btn-qr" onclick="zobrazitQR()">QR Kód 📱</button>
             <button class="btn btn-reset" onclick="vynulovatTrat()">Vyčistiť 🔄</button>
         </div>
-        <div id="qrcode-container" style="display:none; text-align:center; padding:15px; background:white; border-radius:8px; margin-bottom: 10px;"></div>
         <ul id="ulozene-trate-list" class="track-list"></ul>
     </div>
 
@@ -143,23 +163,18 @@
     <script>
         let mojeOtocneBody = []; let mapMarkers = []; let flightPolylines = []; let vsetkyTrate = {};
         let vysledkyPiloti = []; let map = null;
-        let osmLayer, topoLayer; let aktualnyRezimMapy = 'topo'; 
+        let osmLayer, topoLayer, openAipLayer; 
+        let aktualnyRezimMapy = 'topo'; 
+        let rezimPretekara = false; 
         
         let rezimKresleniaBrany = false; let docasnyNazovBrany = ""; let prvyBodBrany = null; let docasnyMarker = null;
+        let cakaSaNaSkorePreBod = null; // Udržiava bod pre modálne okno
 
         const farbyPiloti = ['#00FFFF', '#FF1493', '#00FF00', '#FFD700', '#FF4500', '#8A2BE2', '#FFFFFF', '#FF00FF', '#32CD32', '#00BFFF'];
 
-        // Vytváranie SVG ikoniek
-        function getIconUrl() {
-            let svg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <line x1="50" y1="40" x2="50" y2="60" stroke="black" stroke-width="4"/>
-                <line x1="40" y1="50" x2="60" y2="50" stroke="black" stroke-width="4"/>
-            </svg>`;
-            return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-        }
-
-        const iconKrizik = L.icon({ iconUrl: getIconUrl(), iconSize: [34, 34], iconAnchor: [17, 17] });
-        const iconPrint = L.icon({ iconUrl: getIconUrl(), iconSize: [85, 85], iconAnchor: [42, 42] }); 
+        const svgImage = `data:image/svg+xml;charset=UTF-8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="45" stroke="%23e94560" stroke-width="8" fill="none"/><line x1="50" y1="40" x2="50" y2="60" stroke="black" stroke-width="3"/><line x1="40" y1="50" x2="60" y2="50" stroke="black" stroke-width="3"/></svg>`;
+        const iconKrizik = L.icon({ iconUrl: svgImage, iconSize: [34, 34], iconAnchor: [17, 17] });
+        const iconPrint = L.icon({ iconUrl: svgImage, iconSize: [85, 85], iconAnchor: [42, 42] }); 
 
         function getPolomer() { return (parseInt(document.getElementById('priemer-bodu').value) || 200) / 2; }
         function getCasLimit() { return parseInt(document.getElementById('cas-limit').value) || 60; }
@@ -173,6 +188,9 @@
                 
                 osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, crossOrigin: 'anonymous' });
                 topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, crossOrigin: 'anonymous' });
+                
+                // ICAO vrstva z OpenAIP (Letecké priestory TMS)
+                openAipLayer = L.tileLayer('https://{s}.tile.maps.openaip.net/geowebcache/service/tms/1.0.0/openaip_basemap@EPSG%3A900913@png/{z}/{x}/{y}.png', { maxZoom: 14, tms: true, opacity: 0.55, crossOrigin: 'anonymous' });
                 
                 topoLayer.addTo(map);
                 L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 300 }).addTo(map);
@@ -201,12 +219,38 @@
             } catch (error) { console.error("Chyba mapy:", error); }
         }
 
+        // Prepínanie medzi Topo, ICAO (Základ + OpenAIP letové vrstvy) a OSM Základom
         window.prepniMapu = function() {
-            if (aktualnyRezimMapy === 'osm') {
-                map.removeLayer(osmLayer); topoLayer.addTo(map); aktualnyRezimMapy = 'topo';
+            let btn = document.querySelector('.btn-maptype');
+            if (aktualnyRezimMapy === 'topo') {
+                map.removeLayer(topoLayer);
+                osmLayer.addTo(map);
+                openAipLayer.addTo(map);
+                aktualnyRezimMapy = 'icao';
+                btn.innerHTML = "Mapa: ICAO 🗺️";
+            } else if (aktualnyRezimMapy === 'icao') {
+                map.removeLayer(openAipLayer);
+                map.removeLayer(osmLayer);
+                osmLayer.addTo(map);
+                aktualnyRezimMapy = 'osm';
+                btn.innerHTML = "Mapa: ZÁKLAD 🗺️";
             } else {
-                map.removeLayer(topoLayer); osmLayer.addTo(map); aktualnyRezimMapy = 'osm';
+                map.removeLayer(osmLayer);
+                topoLayer.addTo(map);
+                aktualnyRezimMapy = 'topo';
+                btn.innerHTML = "Mapa: TOPO 🗺️";
             }
+        }
+
+        window.prepniRezimPretekara = function() {
+            rezimPretekara = !rezimPretekara;
+            let btn = document.querySelector('.btn-racer');
+            if (rezimPretekara) {
+                btn.innerHTML = "Organizátor (Ukázať čiary) 👁️"; btn.style.background = "#ff9800";
+            } else {
+                btn.innerHTML = "Pretekár (Skryť čiary) 👁️"; btn.style.background = "#9c27b0";
+            }
+            prekresliVsetkyBody();
         }
 
         window.stiahnutMapu = function() {
@@ -227,10 +271,7 @@
             mapDiv.style.position = 'absolute'; mapDiv.style.top = '0'; mapDiv.style.left = '0'; mapDiv.style.zIndex = '9999';
             map.invalidateSize(); map.fitBounds(bounds, { padding: [60, 60] });
 
-            mapMarkers.forEach(m => {
-                if (m.setIcon && m.options.markerType === 'waypoint') { m.setIcon(iconPrint); }
-            });
-
+            mapMarkers.forEach(m => { if (m.setIcon && m.options.markerType === 'waypoint') { m.setIcon(iconPrint); } });
             const scaleL = document.querySelector('.leaflet-control-scale-line');
             if (scaleL) { scaleL.style.transform = 'scale(3)'; scaleL.style.transformOrigin = 'bottom left'; }
 
@@ -256,8 +297,29 @@
             }, 3000); 
         }
 
-        const R = 6371000;
-        function getDist(lat1, lon1, lat2, lon2) { const dLat=(lat2-lat1)*Math.PI/180; const dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2); return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
+        // Tlačidlá pre modálne okno bodovania
+        window.potvrditSkore = function(skore) {
+            document.getElementById('score-modal').style.display = 'none';
+            if (!cakaSaNaSkorePreBod) return;
+            
+            let finalFarba = '#FFD700'; 
+            if(skore === 10) finalFarba = '#4caf50'; 
+            else if (skore === 25) finalFarba = '#00BFFF'; 
+            else if (skore === 50) finalFarba = '#FFD700'; 
+            else if (skore === 100) finalFarba = '#e94560';
+
+            cakaSaNaSkorePreBod.skore = skore;
+            cakaSaNaSkorePreBod.farba = finalFarba;
+            
+            mojeOtocneBody.push(cakaSaNaSkorePreBod);
+            cakaSaNaSkorePreBod = null;
+            prekresliVsetkyBody();
+        }
+
+        window.zrusitSkore = function() {
+            document.getElementById('score-modal').style.display = 'none';
+            cakaSaNaSkorePreBod = null;
+        }
 
         function mapClickAction(e) {
             const lat = e.latlng.lat; const lon = e.latlng.lng;
@@ -266,8 +328,7 @@
                 if (docasnyMarker) map.removeLayer(docasnyMarker);
                 document.getElementById('status-kreslenia').style.display = "none"; rezimKresleniaBrany = false;
                 
-                let lat1 = prvyBodBrany.lat; let lon1 = prvyBodBrany.lon; let sirka = 100; // Fixná šírka pre brány na Štarte a Cieli
-                
+                let lat1 = prvyBodBrany.lat; let lon1 = prvyBodBrany.lon; let sirka = 100;
                 let dx = (lon - lon1) * Math.cos(lat1 * Math.PI / 180); let dy = (lat - lat1); let len = Math.sqrt(dx*dx + dy*dy);
                 let nx = 0, ny = 1; if(len > 0) { nx = dx / len; ny = dy / len; }
                 
@@ -287,29 +348,9 @@
                 docasnyMarker = L.marker([lat, lon], {icon: iconKrizik}).addTo(map);
                 document.getElementById('status-kreslenia').style.display = "block";
             } else {
-                let validneBody = [10, 25, 50, 100];
-                let finalSkore = 50;
-                
-                while(true) {
-                    let skoreZadane = prompt("Zadaj počet bodov za tento otočák (povolené: 10, 25, 50, 100):", finalSkore);
-                    if (skoreZadane === null) return; // Zrušenie
-                    finalSkore = parseInt(skoreZadane);
-                    if (validneBody.includes(finalSkore)) {
-                        break;
-                    } else {
-                        alert("Neplatná hodnota! Musíš zadať len 10, 25, 50 alebo 100.");
-                    }
-                }
-                
-                // Farba podľa bodov
-                let finalFarba = '#FFD700'; 
-                if(finalSkore === 10) finalFarba = '#4caf50'; // Zelená
-                else if (finalSkore === 25) finalFarba = '#00BFFF'; // Modrá
-                else if (finalSkore === 50) finalFarba = '#FFD700'; // Žltá
-                else if (finalSkore === 100) finalFarba = '#e94560'; // Červená
-
-                mojeOtocneBody.push({ nazov: nazovUpper, lat: lat, lon: lon, typ: "point", skore: finalSkore, farba: finalFarba });
-                prekresliVsetkyBody();
+                // Vyvolanie grafického modálneho okna pre výber bodov
+                cakaSaNaSkorePreBod = { nazov: nazovUpper, lat: lat, lon: lon, typ: "point" };
+                document.getElementById('score-modal').style.display = 'flex';
             }
         }
 
@@ -324,10 +365,8 @@
                     let marker = L.marker([b.lat, b.lon], {icon: iconKrizik, markerType: 'waypoint'}).addTo(map).bindPopup(`<b>${b.nazov}</b>`);
                     mapMarkers.push(marker);
                 } else { 
-                    // Farebný kruh s polomerom a silnejším okrajom
                     let kruh = L.circle([b.lat, b.lon], { color: b.farba, weight: 6, fillColor: b.farba, fillOpacity: 0.15, radius: polomer }).addTo(map);
                     mapMarkers.push(kruh);
-                    // Mikro krížik v strede
                     let marker = L.marker([b.lat, b.lon], {icon: iconKrizik, markerType: 'waypoint'}).addTo(map).bindPopup(`<b>${b.nazov} (${b.skore}b)</b>`);
                     mapMarkers.push(marker);
                 }
@@ -347,13 +386,57 @@
         function ulozitTratDoPamate() { const meno = document.getElementById('task-name-input').value; if(!meno) return; vsetkyTrate[meno] = mojeOtocneBody; localStorage.setItem('mpg_scorehunter_data', JSON.stringify(vsetkyTrate)); vykresliZoznamUlozenychTrati(); }
         function nacitatVsetkyTrateZPamate() { try { const d = localStorage.getItem('mpg_scorehunter_data'); if (d) { vsetkyTrate = JSON.parse(d); vykresliZoznamUlozenychTrati(); } } catch (e) {} }
         function vykresliZoznamUlozenychTrati() { const ul = document.getElementById('ulozene-trate-list'); ul.innerHTML = ""; Object.keys(vsetkyTrate).forEach(m => { const li = document.createElement('li'); li.className = 'track-item'; li.innerText = m; li.onclick = () => { mojeOtocneBody = vsetkyTrate[m]; prekresliVsetkyBody(); }; ul.appendChild(li); }); }
-        function vynulovatTrat() { mojeOtocneBody = []; prekresliVsetkyBody(); document.getElementById('qrcode-container').style.display="none"; }
-        function zobrazitQR() {} // Pre Score Hunter zatial neriesime QR kvoli poctu bodov
-        window.exportovatDoGPX = function() {} // Pre Score Hunter GPX na body nie je potrebne na trase
+        function vynulovatTrat() { mojeOtocneBody = []; prekresliVsetkyBody(); }
 
+        window.exportovatDoGPX = function() {
+            if (mojeOtocneBody.length === 0) return alert("Zoznam bodov je prázdny!");
+            let gpx = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="MPG Score Hunter">\n';
+            mojeOtocneBody.forEach((b, i) => { 
+                let bezpecnyNazov = b.nazov.replace(/"/g, '').replace(/'/g, '');
+                gpx += `  <wpt lat="${b.lat.toFixed(6)}" lon="${b.lon.toFixed(6)}">\n    <name>${bezpecnyNazov}</name>\n`;
+                if (b.typ === 'point') { gpx += `    <desc>Hodnota: ${b.skore} bodov</desc>\n`; } 
+                else { gpx += `    <desc>Typ: ${b.typ}</desc>\n`; }
+                gpx += `  </wpt>\n`; 
+            });
+            gpx += `</gpx>`;
+            const blob = new Blob([gpx], { type: 'application/gpx+xml;charset=utf-8' }); 
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "MPG_ScoreHunter.gpx"; a.click();
+        }
+
+        window.importovatGPX = function(e) {
+            const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const parser = new DOMParser(); const xmlDoc = parser.parseFromString(evt.target.result, "text/xml");
+                    const wpts = xmlDoc.getElementsByTagName("wpt"); if (wpts.length === 0) return alert("Nenašli sa otočné body!");
+                    mojeOtocneBody = [];
+                    for (let i = 0; i < wpts.length; i++) {
+                        let node = wpts[i]; let lat = parseFloat(node.getAttribute("lat")); let lon = parseFloat(node.getAttribute("lon"));
+                        let nameNode = node.getElementsByTagName("name")[0]; let nazov = nameNode ? nameNode.textContent.replace(/^\d+\.\s*/, "").toUpperCase() : "BOD";
+                        let descNode = node.getElementsByTagName("desc")[0]; let descText = descNode ? descNode.textContent : "";
+                        let typ = "point"; let p1 = null; let p2 = null; let skore = 50; let farba = '#FFD700';
+                        if (descText && descText.includes("Hodnota:")) {
+                            let match = descText.match(/Hodnota:\s*(\d+)/);
+                            if (match) {
+                                skore = parseInt(match[1]);
+                                if(skore === 10) farba = '#4caf50'; else if (skore === 25) farba = '#00BFFF'; else if (skore === 50) farba = '#FFD700'; else if (skore === 100) farba = '#e94560';
+                            }
+                        } else if (nazov === "START" || nazov === "CIEL") {
+                            typ = "gate"; p1 = [lat - 0.0005, lon - 0.0005]; p2 = [lat + 0.0005, lon + 0.0005]; skore = 0; farba = 'black';
+                        }
+                        mojeOtocneBody.push({ nazov: nazov, typ: typ, lat: lat, lon: lon, p1: p1, p2: p2, skore: skore, farba: farba });
+                    }
+                    prekresliVsetkyBody();
+                } catch(err) { alert("Chyba GPX: " + err); }
+            };
+            reader.readAsText(file); e.target.value = ""; 
+        }
+
+        const R = 6371000;
+        function getDist(lat1, lon1, lat2, lon2) { const dLat=(lat2-lat1)*Math.PI/180; const dLon=(lon2-lon1)*Math.PI/180; const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2); return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
         function ciarySaPretinaju(A,B,C,D) { function ccw(p1,p2,p3){return(p3[0]-p1[0])*(p2[1]-p1[1])>(p2[0]-p1[0])*(p3[1]-p1[1]);} return(ccw(A,C,D)!==ccw(B,C,D))&&(ccw(A,B,C)!==ccw(A,B,D)); }
-        function formatCas(s) { const m = Math.floor(s/60); const sec = s%60; return m+"m "+sec+"s"; }
         function parseCoord(str, isLon) { let d = parseFloat(str.substring(0, isLon ? 3 : 2)); let m = parseFloat(str.substring(isLon ? 3 : 2)) / 60000; return d + m; }
+        function formatCas(s) { const m = Math.floor(s/60); const sec = s%60; return m+"m "+sec+"s"; }
         const citajSubor = (file) => new Promise((resolve) => { const reader = new FileReader(); reader.onload = (e) => resolve({ text: e.target.result, file: file.name }); reader.readAsText(file); });
 
         document.getElementById('igc-input').addEventListener('change', async function(e) {
@@ -426,21 +509,15 @@
         window.vykresliLeaderboard = function() {
             if(vysledkyPiloti.length === 0) return; document.getElementById('leaderboard-box').style.display = "block";
             
-            let limitSec = getCasLimit() * 60;
-            let penalZaMin = getPenaleMinuta();
+            let limitSec = getCasLimit() * 60; let penalZaMin = getPenaleMinuta();
             
             vysledkyPiloti.forEach(p => {
                 if (!p.maCas) { p.celkovo = 0; p.penaleCasStr = "0"; return; }
-                
                 let minutyNavyse = 0;
-                if (p.casBaseSec > limitSec) {
-                    let sekundyNavyse = p.casBaseSec - limitSec;
-                    minutyNavyse = Math.ceil(sekundyNavyse / 60);
-                }
+                if (p.casBaseSec > limitSec) { minutyNavyse = Math.ceil((p.casBaseSec - limitSec) / 60); }
                 
                 let penaleZaCasBody = minutyNavyse * penalZaMin;
                 p.penaleCasStr = minutyNavyse > 0 ? `-${penaleZaCasBody}b (${minutyNavyse}m)` : "0b";
-                
                 p.celkovo = p.nazbieraneBody - penaleZaCasBody - p.penaleRucne;
             });
             
@@ -453,7 +530,6 @@
             vysledkyPiloti.forEach((p, i) => {
                 let statusRiadok = !p.maCas ? 'class="dnf-row"' : '';
                 let casL = p.maCas ? formatCas(p.casBaseSec) : "<span class='dnf-text'>Mimo trate / Bez Štartu</span>";
-                
                 html += `<tr ${statusRiadok}>
                     <td>${i+1}</td>
                     <td style="text-align:left; white-space:nowrap;"><span class="color-dot" style="background:${p.farba};"></span><input type="text" class="name-input" value="${p.meno}" onchange="zmenMeno(${i}, this.value)"></td>
